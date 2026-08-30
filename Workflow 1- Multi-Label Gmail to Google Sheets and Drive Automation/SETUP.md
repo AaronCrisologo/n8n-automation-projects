@@ -1,4 +1,4 @@
-# ⚙️ Setup & Configuration Guide
+# ️ Setup & Configuration Guide
 
 A step-by-step walkthrough to get this workflow running in your n8n instance.
 
@@ -27,9 +27,9 @@ A step-by-step walkthrough to get this workflow running in your n8n instance.
 Enable these three APIs for your project:
 
 ```
-✅ Gmail API
-✅ Google Drive API
-✅ Google Sheets API
+ Gmail API
+ Google Drive API
+ Google Sheets API
 ```
 
 Navigate to **APIs & Services → Library**, search each, click **Enable**.
@@ -85,7 +85,7 @@ Create three credentials in n8n (**Settings → Credentials**):
 | Client Secret | *(from step 2.4)*                               |
 | Scope         | `https://www.googleapis.com/auth/spreadsheets`   |
 
-> 💡 **Tip:** You can reuse the same OAuth client for all three. Just ensure each credential in n8n requests only its own scope.
+>  **Tip:** You can reuse the same OAuth client for all three. Just ensure each credential in n8n requests only its own scope.
 
 ---
 
@@ -131,7 +131,7 @@ Date Received  |  Snippet  |  Labels  |  Has Attachments  |  Source Label
 | `google-drive-credential-id`           | Replace with your actual n8n credential ID|
 | `YOUR_GOOGLE_OAUTH_TOKEN`              | Use `{{ $credentials.googleDriveOAuth2Api.accessToken }}` instead (HTTP nodes — see note below) |
 
-### ⚠️ Important: HTTP Node Authentication
+### ️ Important: HTTP Node Authentication
 
 The `HTTP: Find/Create Folder` nodes use a static bearer token placeholder for readability.
 In production, replace the `Authorization` header value in each of those 4 nodes with an n8n expression that pulls a live OAuth token from the Google Drive credential:
@@ -181,10 +181,10 @@ Open the **Schedule Trigger (Every 15 min)** node.
 3. Attach a small file (PDF, image, etc.)
 4. In n8n, click **Execute Workflow** (manual run)
 5. Verify:
-   - ✅ Row appears in your Google Sheet
-   - ✅ Folder `Your Name > Today's Date` appears in Drive
-   - ✅ Attachment is inside, with original filename
-   - ✅ Email is marked as read in Gmail
+   -  Row appears in your Google Sheet
+   -  Folder `Your Name > Today's Date` appears in Drive
+   -  Attachment is inside, with original filename
+   -  Email is marked as read in Gmail
 
 ---
 
@@ -196,7 +196,7 @@ Open the **Schedule Trigger (Every 15 min)** node.
 
 ---
 
-## ⚠️ Configuration Caveats (Read Before Importing)
+## ️ Configuration Caveats (Read Before Importing)
 
 The JSON in this folder is **structurally valid and the graph is correct**, but a few configuration details cannot be expressed in the JSON itself and must be addressed when you first import the workflow into n8n.
 
@@ -248,7 +248,7 @@ This is intentional. The Sheets logging and Mark-as-Read happen on a **parallel 
 
 ---
 
-## 🔧 Troubleshooting
+##  Troubleshooting
 
 | Symptom                              | Likely Cause                                    | Fix                                                      |
 |--------------------------------------|--------------------------------------------------|----------------------------------------------------------|
@@ -261,10 +261,10 @@ This is intentional. The Sheets logging and Mark-as-Read happen on a **parallel 
 
 ---
 
-## 🔐 Security Best Practices
+##  Security Best Practices
 
-- ✅ Use a dedicated Google account for automation when possible
-- ✅ Limit OAuth scope to the minimum (`gmail.modify` not `gmail.full`)
-- ✅ Store credentials in n8n's encrypted credential store, not in the JSON file
-- ✅ Never commit the filled-in JSON to a public repo — the one in this portfolio has placeholders only
-- ✅ Use a service account for non-interactive runs (advanced)
+-  Use a dedicated Google account for automation when possible
+-  Limit OAuth scope to the minimum (`gmail.modify` not `gmail.full`)
+-  Store credentials in n8n's encrypted credential store, not in the JSON file
+-  Never commit the filled-in JSON to a public repo — the one in this portfolio has placeholders only
+-  Use a service account for non-interactive runs (advanced)

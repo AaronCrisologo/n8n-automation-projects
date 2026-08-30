@@ -46,7 +46,7 @@
     {
       "parameters": {
         "chatId": "={{ $json.message.chat.id }}",
-        "text": "Please send a photo of your receipt. 📸",
+        "text": "Please send a photo of your receipt. ",
         "additionalFields": {}
       },
       "id": "telegram-ask-photo-id",
@@ -178,7 +178,7 @@
     {
       "parameters": {
         "chatId": "={{ $('Build Receipt Payload').item.json.chatId }}",
-        "text": "=❌ I couldn't read the receipt clearly. Please try again with a sharper, well-lit photo. Error: {{ $json.parseErrorMessage }}",
+        "text": "= I couldn't read the receipt clearly. Please try again with a sharper, well-lit photo. Error: {{ $json.parseErrorMessage }}",
         "additionalFields": {}
       },
       "id": "telegram-parse-error-id",
@@ -408,7 +408,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Assemble the Telegram reply text from the parsed Gemini output\nconst parsed = $('Parse & Normalize Gemini Output').item.json;\nconst timeStr = parsed.receiptTime ? ' at ' + parsed.receiptTime : '';\nconst totalStr = parsed.totalAmount !== null && parsed.totalAmount !== undefined\n  ? `${parsed.currency || ''} ${parsed.totalAmount}`\n  : '—';\n\nconst text =\n  '✅ Receipt logged!\\n\\n' +\n  '🏪 *' + (parsed.merchantName || 'Unknown merchant') + '*\\n' +\n  '📅 ' + (parsed.receiptDate || 'date unclear') + timeStr + '\\n' +\n  '💰 ' + totalStr + '\\n' +\n  '🏷️ Category: ' + (parsed.category || 'uncategorized') + '\\n\\n' +\n  '📁 Saved to Drive folder: `' + (parsed.submissionDateFolder || '') + '`';\n\nreturn [\n  {\n    json: { chatId: parsed.chatId, text }\n  }\n];\n"
+        "jsCode": "// Assemble the Telegram reply text from the parsed Gemini output\nconst parsed = $('Parse & Normalize Gemini Output').item.json;\nconst timeStr = parsed.receiptTime ? ' at ' + parsed.receiptTime : '';\nconst totalStr = parsed.totalAmount !== null && parsed.totalAmount !== undefined\n  ? `${parsed.currency || ''} ${parsed.totalAmount}`\n  : '—';\n\nconst text =\n  ' Receipt logged!\\n\\n' +\n  ' *' + (parsed.merchantName || 'Unknown merchant') + '*\\n' +\n  ' ' + (parsed.receiptDate || 'date unclear') + timeStr + '\\n' +\n  ' ' + totalStr + '\\n' +\n  '️ Category: ' + (parsed.category || 'uncategorized') + '\\n\\n' +\n  ' Saved to Drive folder: `' + (parsed.submissionDateFolder || '') + '`';\n\nreturn [\n  {\n    json: { chatId: parsed.chatId, text }\n  }\n];\n"
       },
       "id": "build-reply-id",
       "name": "Build Confirmation Message",

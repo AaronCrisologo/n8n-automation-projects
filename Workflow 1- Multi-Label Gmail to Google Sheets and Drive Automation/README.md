@@ -1,4 +1,4 @@
-# 📬 Gmail → Google Sheets + Drive Attachment Pipeline
+#  Gmail → Google Sheets + Drive Attachment Pipeline
 
 > An automated, production-ready **n8n workflow** that ingests labeled Gmail messages, logs sender metadata to a Google Sheet, and archives attachments in Google Drive — neatly organized by sender and date.
 
@@ -11,28 +11,28 @@
 
 ---
 
-## ✨ What It Does
+##  What It Does
 
 | Capability | Detail |
 |------------|--------|
-| ⏰ **Scheduled Polling** | Runs automatically on a configurable interval (default: every 15 min) |
-| 🏷️ **Multi-Label Support** | Monitors up to N Gmail labels in one execution path |
-| 📊 **Metadata Logging** | Writes a clean row per email to Google Sheets (sender, subject, date, etc.) |
-| 📎 **Attachment Capture** | Downloads every attachment, preserving the **original filename** |
-| 📁 **Smart Foldering** | Drive hierarchy: `Root / <Sender Name> / <YYYY-MM-DD> / file.ext` |
-| ♻️ **Idempotent** | Re-running never duplicates folders or rows |
-| ✅ **Read-on-Process** | Marks email as read so it isn't reprocessed |
-| 🛡️ **Defensive** | Edge cases handled — sanitized folder names, `newer_than:1d` window, graceful empty-state |
+|  **Scheduled Polling** | Runs automatically on a configurable interval (default: every 15 min) |
+| ️ **Multi-Label Support** | Monitors up to N Gmail labels in one execution path |
+|  **Metadata Logging** | Writes a clean row per email to Google Sheets (sender, subject, date, etc.) |
+|  **Attachment Capture** | Downloads every attachment, preserving the **original filename** |
+|  **Smart Foldering** | Drive hierarchy: `Root / <Sender Name> / <YYYY-MM-DD> / file.ext` |
+| ️ **Idempotent** | Re-running never duplicates folders or rows |
+|  **Read-on-Process** | Marks email as read so it isn't reprocessed |
+| ️ **Defensive** | Edge cases handled — sanitized folder names, `newer_than:1d` window, graceful empty-state |
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 # 1. Clone or download this folder
 # 2. Open n8n → Workflows → Import → select gmail-attachments-workflow.json
 # 3. Replace placeholders (see SETUP.md)
-# 4. Toggle Active ✅
+# 4. Toggle Active 
 # 5. Done — the workflow runs itself.
 ```
 
@@ -41,7 +41,7 @@ Architecture deep-dive: **[ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ---
 
-## 🧩 Tech Stack
+##  Tech Stack
 
 | Layer            | Technology                                              |
 |------------------|---------------------------------------------------------|
@@ -54,7 +54,7 @@ Architecture deep-dive: **[ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ---
 
-## 📂 Repository Contents
+##  Repository Contents
 
 ```
 PDS/
@@ -65,7 +65,7 @@ PDS/
 └── screenshots/                           # (Add your own — see below)
 ```
 
-> 💡 **For maximum portfolio impact:** drop screenshots of your running workflow into a `screenshots/` folder. Recruiters love visuals. Suggested shots:
+>  **For maximum portfolio impact:** drop screenshots of your running workflow into a `screenshots/` folder. Recruiters love visuals. Suggested shots:
 > 1. n8n canvas with all nodes visible
 > 2. A successful execution log
 > 3. The Google Sheet after a few test runs
@@ -73,7 +73,7 @@ PDS/
 
 ---
 
-## 🎯 Key Design Decisions
+##  Key Design Decisions
 
 ### 1. Idempotent folder creation (Find-or-Create)
 Before creating a folder, the workflow **searches** Drive for an existing one with the same name under the same parent. This means restarting n8n or rerunning manually will never produce duplicate `John Doe (2)` folders.
@@ -92,7 +92,7 @@ Email headers (`From`, `Date`, etc.) have messy edge cases — encoded names, mi
 
 ---
 
-## 📊 Sample Output
+##  Sample Output
 
 ### Google Sheet (after a few test runs)
 
@@ -105,59 +105,59 @@ Email headers (`From`, `Date`, etc.) have messy edge cases — encoded names, mi
 ### Google Drive structure
 
 ```
-📁 Gmail Attachments Archive/
-├── 📁 John Doe/
-│   ├── 📁 2026-08-29/
-│   │   ├── 📄 Q3_Invoice.pdf
-│   │   └── 📄 Contract_v2.docx
-│   └── 📁 2026-08-25/
-│       └── 📄 Proposal.pdf
-├── 📁 Jane Smith/
-│   └── 📁 2026-08-29/
-│       └── 📄 meeting_notes.pdf
-└── 📁 Acme Corp/
-    └── 📁 2026-08-28/
+ Gmail Attachments Archive/
+├──  John Doe/
+│   ├──  2026-08-29/
+│   │   ├──  Q3_Invoice.pdf
+│   │   └──  Contract_v2.docx
+│   └──  2026-08-25/
+│       └──  Proposal.pdf
+├──  Jane Smith/
+│   └──  2026-08-29/
+│       └──  meeting_notes.pdf
+└──  Acme Corp/
+    └──  2026-08-28/
         └── (no attachments)
 ```
 
 ---
 
-## 🔁 Extending the Workflow
+##  Extending the Workflow
 
 Easy next steps for an upgraded portfolio piece:
 
 | Add-on                              | Difficulty | Why it impresses                                  |
 |-------------------------------------|------------|---------------------------------------------------|
-| Slack notification on new email     | ⭐          | Cross-platform integration                        |
-| Virus scan via VirusTotal API       | ⭐⭐        | Security awareness                                |
-| OCR scanned PDFs via Google Vision  | ⭐⭐        | AI/ML touch                                       |
-| Auto-reply with template            | ⭐          | Two-way automation                                |
-| Send to Notion / Airtable instead   | ⭐          | Database flexibility                              |
-| Dashboard in Looker Studio          | ⭐⭐        | Data visualization layer                          |
-| Resume parsing for recruiting labels| ⭐⭐⭐      | Real-world HR use case                            |
+| Slack notification on new email     |           | Cross-platform integration                        |
+| Virus scan via VirusTotal API       |         | Security awareness                                |
+| OCR scanned PDFs via Google Vision  |         | AI/ML touch                                       |
+| Auto-reply with template            |           | Two-way automation                                |
+| Send to Notion / Airtable instead   |           | Database flexibility                              |
+| Dashboard in Looker Studio          |         | Data visualization layer                          |
+| Resume parsing for recruiting labels|       | Real-world HR use case                            |
 
 ---
 
-## 🧪 Test Cases (manual)
+##  Test Cases (manual)
 
-1. ✅ Email with no attachments → Sheet row, no Drive activity, marked read
-2. ✅ Email with 1 attachment → Sheet row + 1 file in `Sender/Date/`
-3. ✅ Email with 3 attachments → Sheet row + 3 files in same `Sender/Date/`
-4. ✅ Two emails same sender, same day → Both files in one `Sender/Date/` folder
-5. ✅ Same sender on different days → Two date folders under the same sender
-6. ✅ Special characters in sender name (`O'Brien & Co.`) → Sanitized to `OBrien  Co.`
-7. ✅ Email with inline images only (no real attachments) → No files downloaded
-8. ✅ Empty inbox → Workflow runs, no rows appended, no errors
+1.  Email with no attachments → Sheet row, no Drive activity, marked read
+2.  Email with 1 attachment → Sheet row + 1 file in `Sender/Date/`
+3.  Email with 3 attachments → Sheet row + 3 files in same `Sender/Date/`
+4.  Two emails same sender, same day → Both files in one `Sender/Date/` folder
+5.  Same sender on different days → Two date folders under the same sender
+6.  Special characters in sender name (`O'Brien & Co.`) → Sanitized to `OBrien  Co.`
+7.  Email with inline images only (no real attachments) → No files downloaded
+8.  Empty inbox → Workflow runs, no rows appended, no errors
 
 ---
 
-## 📜 License
+##  License
 
 MIT — use it, modify it, ship it.
 
 ---
 
-## 👤 Author
+##  Author
 
 Built as a portfolio piece demonstrating:
 - **API integration** (Gmail, Sheets, Drive)

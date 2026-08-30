@@ -114,13 +114,13 @@ def validate_workflow(path: Path, label: str):
     print(f"  Nodes: {len(nodes)}")
     print(f"  Connections: {len(conns)}")
     if errors:
-        print(f"\n  ❌ {len(errors)} ERROR(S):")
+        print(f"\n   {len(errors)} ERROR(S):")
         for e in errors:
             print(f"    - {e}")
     else:
-        print(f"\n  ✅ No errors found")
+        print(f"\n   No errors found")
     if warnings:
-        print(f"\n  ⚠️  {len(warnings)} warning(s):")
+        print(f"\n  ️  {len(warnings)} warning(s):")
         for w in warnings:
             print(f"    - {w}")
 
@@ -134,8 +134,8 @@ ok2 = validate_workflow(w2, "Workflow 2 (Telegram)")
 
 print("\n" + "="*70)
 if ok1 and ok2:
-    print("  ✅ BOTH WORKFLOWS PASS VALIDATION")
+    print("   BOTH WORKFLOWS PASS VALIDATION")
     sys.exit(0)
 else:
-    print("  ❌ ONE OR MORE WORKFLOWS HAVE ERRORS — SEE ABOVE")
+    print("   ONE OR MORE WORKFLOWS HAVE ERRORS — SEE ABOVE")
     sys.exit(1)

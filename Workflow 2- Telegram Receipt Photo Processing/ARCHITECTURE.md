@@ -1,22 +1,22 @@
-# 🏗️ Workflow Architecture
+# ️ Workflow Architecture
 
 ## Final Drive Folder Hierarchy
 
 ```
-📁 Google Drive
-   └── 📁 Receipt Inbox (root, configurable)
+ Google Drive
+   └──  Receipt Inbox (root, configurable)
        │
-       ├── 📁 2026-08-29
-       │   ├── 🖼️ receipt_482391_20260829_184215.jpg
-       │   ├── 🖼️ receipt_715290_20260829_213042.jpg
-       │   └── 🖼️ receipt_1048273_20260829_225517.jpg
+       ├──  2026-08-29
+       │   ├── ️ receipt_482391_20260829_184215.jpg
+       │   ├── ️ receipt_715290_20260829_213042.jpg
+       │   └── ️ receipt_1048273_20260829_225517.jpg
        │
-       ├── 📁 2026-08-28
-       │   ├── 🖼️ receipt_482391_20260828_091502.jpg
-       │   └── 🖼️ receipt_1048273_20260828_194511.jpg
+       ├──  2026-08-28
+       │   ├── ️ receipt_482391_20260828_091502.jpg
+       │   └── ️ receipt_1048273_20260828_194511.jpg
        │
-       └── 📁 2026-08-27
-           └── 🖼️ receipt_715290_20260827_123344.jpg
+       └──  2026-08-27
+           └── ️ receipt_715290_20260827_123344.jpg
 ```
 
 ## Google Sheets Row Schema

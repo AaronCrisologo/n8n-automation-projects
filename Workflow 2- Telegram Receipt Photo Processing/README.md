@@ -1,4 +1,4 @@
-# 📸 Telegram Receipt Inbox — Gemini Vision OCR Pipeline
+#  Telegram Receipt Inbox — Gemini Vision OCR Pipeline
 
 > A conversational n8n workflow that turns receipt **photos sent via Telegram** into structured, queryable data — with the originals safely archived in Google Drive.
 
@@ -11,21 +11,21 @@
 
 ---
 
-## ✨ What It Does
+##  What It Does
 
 | Capability | Detail |
 |------------|--------|
-| 📱 **Telegram Inbox** | Receives receipt photos from any user (or restricted to your account) |
-| 🤖 **Gemini Vision OCR** | Extracts merchant, date, totals, line items, payment method, category |
-| 📊 **Structured Logging** | Appends a clean row per receipt to Google Sheets (24 columns) |
-| 📁 **Auto-Organized Storage** | Sends original photo to `Drive / <submission-date> / file.jpg` |
-| 💬 **Instant Confirmation** | Replies to the user with parsed fields in a clean Markdown message |
-| 🛡️ **Error Feedback** | Tells the user immediately if the photo couldn't be parsed |
-| ♻️ **Idempotent Folders** | Same-day submissions land in the same Drive folder — no duplicates |
+|  **Telegram Inbox** | Receives receipt photos from any user (or restricted to your account) |
+|  **Gemini Vision OCR** | Extracts merchant, date, totals, line items, payment method, category |
+|  **Structured Logging** | Appends a clean row per receipt to Google Sheets (24 columns) |
+|  **Auto-Organized Storage** | Sends original photo to `Drive / <submission-date> / file.jpg` |
+|  **Instant Confirmation** | Replies to the user with parsed fields in a clean Markdown message |
+| ️ **Error Feedback** | Tells the user immediately if the photo couldn't be parsed |
+| ️ **Idempotent Folders** | Same-day submissions land in the same Drive folder — no duplicates |
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ```bash
 # 1. Create a Telegram bot via @BotFather
@@ -41,7 +41,7 @@ Architecture deep-dive: **[ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ---
 
-## 🧩 Tech Stack
+##  Tech Stack
 
 | Layer              | Technology                                              |
 |--------------------|---------------------------------------------------------|
@@ -54,7 +54,7 @@ Architecture deep-dive: **[ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ---
 
-## 📂 Repository Contents
+##  Repository Contents
 
 ```
 Workflow 2- Telegram Receipt Photo Processing/
@@ -66,7 +66,7 @@ Workflow 2- Telegram Receipt Photo Processing/
 
 ---
 
-## 🎯 Key Design Decisions
+##  Key Design Decisions
 
 ### 1. Gemini 1.5 Flash over Pro
 - **Latency:** Flash responds in ~1.5s for a typical receipt — Pro takes 4–6s
@@ -97,17 +97,17 @@ If you upload a photo of a 3-week-old receipt today, it lands in today's Drive f
 
 ---
 
-## 📊 Sample Output
+##  Sample Output
 
 ### Telegram conversation
 
 > **You:** *[sends photo of a Whole Foods receipt]*
-> **Bot:** ✅ Receipt logged!
-> 🏪 *Whole Foods Market*
-> 📅 2026-08-29 at 18:42
-> 💰 USD 47.32
-> 🏷️ Category: meals
-> 📁 Saved to Drive folder: `2026-08-29`
+> **Bot:**  Receipt logged!
+>  *Whole Foods Market*
+>  2026-08-29 at 18:42
+>  USD 47.32
+> ️ Category: meals
+>  Saved to Drive folder: `2026-08-29`
 
 ### Google Sheet (after a few submissions)
 
@@ -120,50 +120,50 @@ If you upload a photo of a 3-week-old receipt today, it lands in today's Drive f
 ### Google Drive structure
 
 ```
-📁 Receipt Inbox/
-├── 📁 2026-08-29/
-│   ├── 🖼️ receipt_482391_20260829_184215.jpg
-│   └── 🖼️ receipt_715290_20260829_213042.jpg
-└── 📁 2026-08-28/
-    └── 🖼️ receipt_482391_20260828_091502.jpg
+ Receipt Inbox/
+├──  2026-08-29/
+│   ├── ️ receipt_482391_20260829_184215.jpg
+│   └── ️ receipt_715290_20260829_213042.jpg
+└──  2026-08-28/
+    └── ️ receipt_482391_20260828_091502.jpg
 ```
 
 ---
 
-## 🔁 Extending the Workflow
+##  Extending the Workflow
 
 | Add-on                                | Difficulty | Why it impresses                              |
 |---------------------------------------|------------|-----------------------------------------------|
-| Multi-currency conversion             | ⭐          | Real-world accounting concern                  |
-| Auto-approval for amounts under $25   | ⭐          | Expense policy automation                     |
-| Manager approval via inline buttons   | ⭐⭐        | Two-way Telegram interactivity                |
-| Duplicate detection (photo hash)      | ⭐          | Prevents accidental double-uploads            |
-| Weekly email digest                   | ⭐          | Reporting layer                               |
-| Categorization via machine learning   | ⭐⭐        | Smarter than Gemini's heuristics              |
-| Notion / Airtable as alternative sink | ⭐          | Database flexibility                          |
+| Multi-currency conversion             |           | Real-world accounting concern                  |
+| Auto-approval for amounts under $25   |           | Expense policy automation                     |
+| Manager approval via inline buttons   |         | Two-way Telegram interactivity                |
+| Duplicate detection (photo hash)      |           | Prevents accidental double-uploads            |
+| Weekly email digest                   |           | Reporting layer                               |
+| Categorization via machine learning   |         | Smarter than Gemini's heuristics              |
+| Notion / Airtable as alternative sink |           | Database flexibility                          |
 
 ---
 
-## 🧪 Test Cases
+##  Test Cases
 
-1. ✅ Receipt photo (clear, well-lit) → Parsed, logged, saved, confirmation sent
-2. ✅ Text-only message → Bot asks for a photo
-3. ✅ Blurry photo → Bot replies with parse error, no row added
-4. ✅ Non-receipt photo (cat, sunset) → Logged with mostly null fields, photo still saved
-5. ✅ Photo with caption "Client lunch" → Caption preserved in Sheet
-6. ✅ Multiple receipts in one day → All land in same date folder
-7. ✅ Receipt in foreign language (e.g. Japanese) → Gemini still extracts numeric fields
-8. ✅ Large receipt (long line item list) → `Line Items (JSON)` column captures the full list
+1.  Receipt photo (clear, well-lit) → Parsed, logged, saved, confirmation sent
+2.  Text-only message → Bot asks for a photo
+3.  Blurry photo → Bot replies with parse error, no row added
+4.  Non-receipt photo (cat, sunset) → Logged with mostly null fields, photo still saved
+5.  Photo with caption "Client lunch" → Caption preserved in Sheet
+6.  Multiple receipts in one day → All land in same date folder
+7.  Receipt in foreign language (e.g. Japanese) → Gemini still extracts numeric fields
+8.  Large receipt (long line item list) → `Line Items (JSON)` column captures the full list
 
 ---
 
-## 📜 License
+##  License
 
 MIT — use it, modify it, ship it.
 
 ---
 
-## 👤 Author
+##  Author
 
 Built as a portfolio piece demonstrating:
 - **Multi-modal AI integration** — Gemini Vision for OCR

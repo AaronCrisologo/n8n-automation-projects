@@ -1,33 +1,33 @@
-# 🏗️ Workflow Architecture
+# ️ Workflow Architecture
 
 ## Final Drive Folder Hierarchy
 
 ```
-📁 Google Drive
-   └── 📁 Root (configurable)
+ Google Drive
+   └──  Root (configurable)
        │
-       ├── 📁 John Doe
-       │   ├── 📁 2026-08-29
-       │   │   ├── 📄 invoice_aug.pdf
-       │   │   ├── 📄 contract_v2.docx
-       │   │   └── 🖼️  signature.png
-       │   ├── 📁 2026-08-28
-       │   │   └── 📄 report.xlsx
-       │   └── 📁 2026-08-25
-       │       └── 📄 proposal.pdf
+       ├──  John Doe
+       │   ├──  2026-08-29
+       │   │   ├──  invoice_aug.pdf
+       │   │   ├──  contract_v2.docx
+       │   │   └── ️  signature.png
+       │   ├──  2026-08-28
+       │   │   └──  report.xlsx
+       │   └──  2026-08-25
+       │       └──  proposal.pdf
        │
-       ├── 📁 Jane Smith
-       │   ├── 📁 2026-08-29
-       │   │   └── 📄 meeting_notes.pdf
-       │   └── 📁 2026-08-27
-       │       └── 📄 budget.xlsx
+       ├──  Jane Smith
+       │   ├──  2026-08-29
+       │   │   └──  meeting_notes.pdf
+       │   └──  2026-08-27
+       │       └──  budget.xlsx
        │
-       └── 📁 Acme Corporation
-           ├── 📁 2026-08-29
-           │   ├── 📄 order_001.pdf
-           │   └── 📄 shipping_label.png
-           └── 📁 2026-08-26
-               └── 📄 terms.pdf
+       └──  Acme Corporation
+           ├──  2026-08-29
+           │   ├──  order_001.pdf
+           │   └──  shipping_label.png
+           └──  2026-08-26
+               └──  terms.pdf
 ```
 
 ## Google Sheets Row Schema

@@ -1,4 +1,4 @@
-# ⚙️ Setup & Configuration Guide
+# ️ Setup & Configuration Guide
 
 A step-by-step walkthrough to get the Telegram Receipt workflow running.
 
@@ -53,7 +53,7 @@ The webhook ID in the workflow JSON is `telegram-receipt-bot-webhook` — make s
 4. Select (or create) a Google Cloud project
 5. **Copy the key** — you'll paste it into the workflow
 
-> 💰 **Pricing:** Gemini 1.5 Flash is free for up to 15 requests per minute and 1,500 per day — more than enough for personal receipt processing. For higher volume, the Flash model is ~$0.075 per million input tokens.
+>  **Pricing:** Gemini 1.5 Flash is free for up to 15 requests per minute and 1,500 per day — more than enough for personal receipt processing. For higher volume, the Flash model is ~$0.075 per million input tokens.
 
 ---
 
@@ -154,7 +154,7 @@ Photo File ID | Drive File Name | Submission Date Folder
 | `google-sheets-credential-id`          | Your actual n8n Sheets credential ID          |
 | `google-drive-credential-id`           | Your actual n8n Drive credential ID           |
 
-### ⚠️ HTTP Node Token Refresh
+### ️ HTTP Node Token Refresh
 
 The `HTTP: Find/Create Date Folder` nodes use a static bearer token placeholder.
 Replace the `Authorization` header value with this expression for live OAuth refresh:
@@ -171,9 +171,9 @@ Value: =Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}
 2. Open Telegram → start a chat with your bot
 3. Send a **photo** of a receipt (with a caption like "Client lunch")
 4. Expected sequence:
-   - ✅ Bot replies: "✅ Receipt logged!" with merchant, total, date, category
-   - ✅ Row appears in your Google Sheet
-   - ✅ Date folder `2026-08-29` appears in Drive with the original photo inside
+   -  Bot replies: " Receipt logged!" with merchant, total, date, category
+   -  Row appears in your Google Sheet
+   -  Date folder `2026-08-29` appears in Drive with the original photo inside
 
 ### Troubleshooting Tests
 | Test                                  | Expected Result                                       |
@@ -191,7 +191,7 @@ Once tests pass, leave the workflow active. The Telegram webhook persists across
 
 ---
 
-## ⚠️ Configuration Caveats (Read Before Importing)
+## ️ Configuration Caveats (Read Before Importing)
 
 The JSON in this folder is **structurally valid and the graph is correct**, but a few configuration details cannot be expressed in the JSON itself and must be addressed when you first import the workflow into n8n.
 
@@ -265,7 +265,7 @@ The default Telegram flow processes **one photo at a time**, so rate limits won'
 
 ---
 
-## 🔧 Troubleshooting
+##  Troubleshooting
 
 | Symptom                                | Likely Cause                            | Fix                                                    |
 |----------------------------------------|------------------------------------------|--------------------------------------------------------|
@@ -279,21 +279,21 @@ The default Telegram flow processes **one photo at a time**, so rate limits won'
 
 ---
 
-## 🔐 Security Best Practices
+##  Security Best Practices
 
-- ✅ **Don't commit your real API key** — keep `YOUR_GEMINI_API_KEY_HERE` as a placeholder
-- ✅ **Restrict the bot** — if you want it private, only respond to your Telegram user ID by adding a check in the `If: Has Photo?` node:
+-  **Don't commit your real API key** — keep `YOUR_GEMINI_API_KEY_HERE` as a placeholder
+-  **Restrict the bot** — if you want it private, only respond to your Telegram user ID by adding a check in the `If: Has Photo?` node:
   ```js
   // Add an AND condition:
   // $json.message.from.id === YOUR_TELEGRAM_USER_ID
   ```
-- ✅ **Limit OAuth scope** — `drive.file` only grants access to files this app creates, not your entire Drive
-- ✅ **Rate limit Gemini** — free tier is 15 RPM. If you process more than 15 receipts/minute, upgrade to a paid tier
-- ✅ **Rotate your bot token** — if leaked, use @BotFather's `/revoke` command
+-  **Limit OAuth scope** — `drive.file` only grants access to files this app creates, not your entire Drive
+-  **Rate limit Gemini** — free tier is 15 RPM. If you process more than 15 receipts/minute, upgrade to a paid tier
+-  **Rotate your bot token** — if leaked, use @BotFather's `/revoke` command
 
 ---
 
-## 🚀 Optional Enhancements
+##  Optional Enhancements
 
 - **Multi-user support** — drop the `If: Has Photo?` user check, let your team submit receipts
 - **Currency conversion** — call an exchange rate API, store both original and USD amounts
