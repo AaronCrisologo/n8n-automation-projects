@@ -52,12 +52,6 @@ Receives receipt photos via Telegram, extracts structured data with Gemini Visio
 
 ---
 
-##  30-Second Pitch (for interviews)
-
-> "I built two n8n automation projects. The first polls Gmail across multiple labels, extracts sender metadata to a Google Sheet, and archives attachments in Google Drive organized by sender and date — 23 nodes with find-or-create folder logic. The second is a Telegram bot that receives receipt photos, uses Google Gemini 1.5 Flash to OCR them into structured JSON, logs everything to a Google Sheet, archives the original photo to a date-organized Drive folder, and replies to the user in Telegram with the parsed data. Both demonstrate defensive parsing, idempotent folder creation, and production-ready documentation."
-
----
-
 ##  Final Repository Structure
 
 ```

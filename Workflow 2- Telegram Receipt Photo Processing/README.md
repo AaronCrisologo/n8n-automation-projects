@@ -141,35 +141,3 @@ If you upload a photo of a 3-week-old receipt today, it lands in today's Drive f
 | Weekly email digest                   |           | Reporting layer                               |
 | Categorization via machine learning   |         | Smarter than Gemini's heuristics              |
 | Notion / Airtable as alternative sink |           | Database flexibility                          |
-
----
-
-##  Test Cases
-
-1.  Receipt photo (clear, well-lit) → Parsed, logged, saved, confirmation sent
-2.  Text-only message → Bot asks for a photo
-3.  Blurry photo → Bot replies with parse error, no row added
-4.  Non-receipt photo (cat, sunset) → Logged with mostly null fields, photo still saved
-5.  Photo with caption "Client lunch" → Caption preserved in Sheet
-6.  Multiple receipts in one day → All land in same date folder
-7.  Receipt in foreign language (e.g. Japanese) → Gemini still extracts numeric fields
-8.  Large receipt (long line item list) → `Line Items (JSON)` column captures the full list
-
----
-
-##  License
-
-MIT — use it, modify it, ship it.
-
----
-
-##  Author
-
-Built as a portfolio piece demonstrating:
-- **Multi-modal AI integration** — Gemini Vision for OCR
-- **Conversational UX** — Telegram as input + output channel
-- **Real-time webhook architecture** — n8n Telegram trigger
-- **Structured output engineering** — JSON-mode prompts with defensive parsing
-- **End-to-end automation** — photo in, structured data + original archived out
-
-> *"Receipts shouldn't live on a kitchen counter. They should live in a spreadsheet."*

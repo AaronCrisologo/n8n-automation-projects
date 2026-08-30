@@ -135,35 +135,3 @@ Easy next steps for an upgraded portfolio piece:
 | Send to Notion / Airtable instead   |           | Database flexibility                              |
 | Dashboard in Looker Studio          |         | Data visualization layer                          |
 | Resume parsing for recruiting labels|       | Real-world HR use case                            |
-
----
-
-##  Test Cases (manual)
-
-1.  Email with no attachments → Sheet row, no Drive activity, marked read
-2.  Email with 1 attachment → Sheet row + 1 file in `Sender/Date/`
-3.  Email with 3 attachments → Sheet row + 3 files in same `Sender/Date/`
-4.  Two emails same sender, same day → Both files in one `Sender/Date/` folder
-5.  Same sender on different days → Two date folders under the same sender
-6.  Special characters in sender name (`O'Brien & Co.`) → Sanitized to `OBrien  Co.`
-7.  Email with inline images only (no real attachments) → No files downloaded
-8.  Empty inbox → Workflow runs, no rows appended, no errors
-
----
-
-##  License
-
-MIT — use it, modify it, ship it.
-
----
-
-##  Author
-
-Built as a portfolio piece demonstrating:
-- **API integration** (Gmail, Sheets, Drive)
-- **OAuth 2.0** flow design
-- **Defensive automation** (idempotency, sanitization, error handling)
-- **Production-readiness** thinking (logging, scheduling, edge cases)
-- **Documentation discipline** (README + SETUP + ARCHITECTURE)
-
-> *"The difference between a demo and a product is what happens when the input gets weird."*
