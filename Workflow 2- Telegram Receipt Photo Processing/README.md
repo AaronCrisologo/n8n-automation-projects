@@ -137,17 +137,3 @@ If you upload a photo of a 3-week-old receipt today, it lands in today's Drive f
 └──  2026-08-28/
     └── ️ receipt_482391_20260828_091502.jpg
 ```
-
----
-
-##  Extending the Workflow
-
-| Add-on                                | Difficulty | Why it impresses                              |
-|---------------------------------------|------------|-----------------------------------------------|
-| Multi-currency conversion             |           | Real-world accounting concern                  |
-| Auto-approval for amounts under $25   |           | Expense policy automation                     |
-| Manager approval via inline buttons   |         | Two-way Telegram interactivity                |
-| Duplicate detection (photo hash)      |           | Prevents accidental double-uploads            |
-| Weekly email digest                   |           | Reporting layer                               |
-| Categorization via machine learning   |         | Smarter than Gemini's heuristics              |
-| Notion / Airtable as alternative sink |           | Database flexibility                          |

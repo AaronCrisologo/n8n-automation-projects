@@ -119,19 +119,3 @@ Email headers (`From`, `Date`, etc.) have messy edge cases — encoded names, mi
     └──  2026-08-28/
         └── (no attachments)
 ```
-
----
-
-##  Extending the Workflow
-
-Easy next steps for an upgraded portfolio piece:
-
-| Add-on                              | Difficulty | Why it impresses                                  |
-|-------------------------------------|------------|---------------------------------------------------|
-| Slack notification on new email     |           | Cross-platform integration                        |
-| Virus scan via VirusTotal API       |         | Security awareness                                |
-| OCR scanned PDFs via Google Vision  |         | AI/ML touch                                       |
-| Auto-reply with template            |           | Two-way automation                                |
-| Send to Notion / Airtable instead   |           | Database flexibility                              |
-| Dashboard in Looker Studio          |         | Data visualization layer                          |
-| Resume parsing for recruiting labels|       | Real-world HR use case                            |
