@@ -53,7 +53,7 @@ The webhook ID in the workflow JSON is `telegram-receipt-bot-webhook` — make s
 4. Select (or create) a Google Cloud project
 5. **Copy the key** — you'll paste it into the workflow
 
->  **Pricing:** Gemini 1.5 Flash is free for up to 15 requests per minute and 1,500 per day — more than enough for personal receipt processing. For higher volume, the Flash model is ~$0.075 per million input tokens.
+>  **Pricing:** Gemini 2.5 Flash has a free tier via Google AI Studio — 10 requests per minute and 250 per day. That covers most personal and small-business receipt volumes. For higher throughput, the paid tier is ~$0.30 per million input tokens (~$0.0025 per typical receipt).
 
 ---
 
@@ -243,7 +243,7 @@ The `HTTP: Gemini Vision Extract` node passes the key in the `x-goog-api-key` he
 
 ### 5. Gemini Image Limits
 
-Gemini 1.5 Flash accepts images up to **20 MB** (per file) and **up to 3600 images per request**. Telegram photos are always JPEG and typically 200 KB – 2 MB, so you'll never hit the limit for normal use. But:
+Gemini 2.5 Flash accepts images up to **20 MB** (per file) and **up to 3600 images per request**. Telegram photos are always JPEG and typically 200 KB – 2 MB, so you'll never hit the limit for normal use. But:
 - If a user sends a **document** (a PDF, say) instead of a photo, this workflow silently ignores it (the `If: Has Photo?` check fails). This is intentional.
 - If a user sends a **very high-res photo** (rare on Telegram), it will be downsized by Telegram before delivery.
 
@@ -257,7 +257,7 @@ If you want to log *every* attempt (even failures) for auditing, change the Fals
 
 | Service | Free tier limit | What happens if you exceed |
 |---------|-----------------|----------------------------|
-| Gemini 1.5 Flash | 15 requests/min, 1,500/day | HTTP 429 — the workflow fails for that one photo, but subsequent photos work |
+| Gemini 2.5 Flash | 10 requests/min, 250/day | HTTP 429 — the workflow fails for that one photo, but subsequent photos work |
 | Telegram Bot API | 30 messages/sec to one chat, 20 messages/min to same group | HTTP 429 — retry next photo |
 | Google Drive API | 12,000 requests/min per project | Effectively unlimited for personal use |
 
@@ -288,7 +288,7 @@ The default Telegram flow processes **one photo at a time**, so rate limits won'
   // $json.message.from.id === YOUR_TELEGRAM_USER_ID
   ```
 -  **Limit OAuth scope** — `drive.file` only grants access to files this app creates, not your entire Drive
--  **Rate limit Gemini** — free tier is 15 RPM. If you process more than 15 receipts/minute, upgrade to a paid tier
+-  **Rate limit Gemini** — free tier is 10 RPM. If you process more than 10 receipts/minute, upgrade to a paid tier (or switch to Tesseract, see § 11)
 -  **Rotate your bot token** — if leaked, use @BotFather's `/revoke` command
 
 ---
@@ -301,3 +301,50 @@ The default Telegram flow processes **one photo at a time**, so rate limits won'
 - **Duplicate detection** — hash the photo bytes, check the Sheet for existing hash before uploading
 - **Approval flow** — for amounts over $X, send to a manager's Telegram with inline Approve/Reject buttons
 - **Weekly summary** — separate workflow that runs Friday at 5pm and emails a spend report
+
+---
+
+## 11. Switching to Tesseract OCR (Local Alternative)
+
+If you want to avoid sending receipt photos to Google's servers — for privacy, offline use, or because you've hit Gemini's free tier limit — you can swap the Gemini vision node for [Tesseract OCR](https://github.com/tesseract-ocr/tesseract), an open-source local OCR engine.
+
+### Tradeoffs to know first
+
+| | Gemini 2.5 Flash | Tesseract |
+|---|---|---|
+| **Cost** | Free tier (250/day), then paid | Free, runs locally |
+| **Privacy** | Sends photo to Google API | Fully local — nothing leaves your machine |
+| **Setup** | Just an API key | Install Tesseract binary + a language pack |
+| **Output** | Structured JSON (single call) | Raw text only — you write the parser |
+| **Accuracy on messy receipts** | High | Lower — expect more manual corrections |
+| **Speed** | ~1.5s per receipt (network-bound) | 1–3s per receipt (CPU-bound) |
+
+### Installation
+
+1. **Install Tesseract on the host running n8n:**
+   - macOS: `brew install tesseract`
+   - Ubuntu/Debian: `sudo apt install tesseract-ocr`
+   - Windows: download installer from [UB Mannheim's repo](https://github.com/UB-Mannheim/tesseract/wiki)
+2. **Add a language pack if you need non-English receipts:**
+   - macOS: `brew install tesseract-lang`
+   - Ubuntu: `sudo apt install tesseract-ocr-[lang]` (e.g. `tesseract-ocr-deu` for German)
+
+### Modifying the workflow
+
+The change is to the `HTTP: Gemini Vision Extract` node. Replace it with an **Execute Command** node that shells out to Tesseract:
+
+```bash
+tesseract {{ $binary.data.filePath }} stdout -l eng
+```
+
+(Replace `{{ $binary.data.filePath }}` with the path to your downloaded Telegram photo, or pipe the base64-decoded image to Tesseract's stdin.)
+
+### Writing the parser
+
+Unlike Gemini, Tesseract returns **raw text**. You'll need to add a Code node after the Execute Command node that:
+1. Looks for date patterns (regex: `\d{1,2}[/-]\d{1,2}[/-]\d{2,4}`)
+2. Finds the total (look for lines containing "total", "amount", "sum" and take the largest currency-formatted number on that line)
+3. Extracts merchant name (usually the first non-empty line in larger font)
+4. Falls back to `null` for anything ambiguous
+
+This is the main reason most users stick with Gemini — the structured output saves you from writing brittle parsers. Tesseract is worth it when privacy or quota limits matter more than parsing reliability.

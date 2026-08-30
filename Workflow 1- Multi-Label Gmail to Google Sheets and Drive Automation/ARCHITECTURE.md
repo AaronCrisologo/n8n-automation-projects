@@ -56,37 +56,3 @@
 | Find-or-create pattern            | Idempotent — re-running never duplicates folders                     |
 | Mark as read at the end           | Same email never processed twice on the next run                     |
 | `newer_than:1d` Gmail filter      | Bounded window — even if Mark-as-Read fails, no infinite loop        |
-
-## Mermaid Diagram (for documentation sites)
-
-```mermaid
-flowchart TD
-    A[Schedule Trigger] --> B[Define Labels]
-    B --> C[Split Labels]
-    C --> D[Build Search Query]
-    D --> E[Gmail: Fetch Emails]
-    E --> F{Emails Found?}
-    F -->|No| Z[End]
-    F -->|Yes| G[Process Each Email]
-    G --> H[Extract Metadata]
-    H --> I[Google Sheets: Log]
-    I --> J{Has Attachments?}
-    J -->|No| Y[Mark as Read]
-    J -->|Yes| K[Prepare Folder Names]
-    K --> L[Find Sender Folder]
-    L --> M{Sender Exists?}
-    M -->|No| N[Create Sender Folder]
-    M -->|Yes| O[Merge Sender ID]
-    N --> O
-    O --> P[Find Date Folder]
-    P --> Q{Date Exists?}
-    Q -->|No| R[Create Date Folder]
-    Q -->|Yes| S[Merge Date ID]
-    R --> S
-    S --> T[Fetch Attachments]
-    T --> U[Process Each Attachment]
-    U --> V[Download Attachment]
-    V --> W[Upload to Drive]
-    W --> Y
-    Y --> Z
-```

@@ -53,7 +53,7 @@
 |-----------------------------------|----------------------------------------------------------------------|
 | Telegram webhook trigger          | Real-time — user gets instant confirmation vs polling               |
 | `getFile` → `HTTP /file/bot...`   | Two-step Telegram API to retrieve actual bytes                       |
-| Gemini 1.5 Flash                  | Fastest vision model, free tier friendly, accurate on receipts      |
+| Gemini 2.5 Flash                  | Current default flash model, ~1.5s latency, generous free tier, much better than 1.5 on messy receipts |
 | `responseMimeType: application/json` | Forces structured output — no parsing markdown around JSON         |
 | Strip markdown fences in Code     | Defensive: model occasionally ignores instructions, parser still works |
 | Number normalization              | Gemini returns `"$12.50"` or `"12.50"` — coerce to real numbers    |
@@ -61,29 +61,6 @@
 | Date folder on **submission** date| Stable — re-uploading same receipt never creates a new folder       |
 | Telegram confirmation message     | UX loop — user knows immediately if OCR succeeded or failed          |
 | Markdown formatting in reply      | Renders nicely in mobile Telegram app                                |
-
-## Mermaid Diagram
-
-```mermaid
-flowchart TD
-    A[Telegram Trigger] --> B{Has Photo?}
-    B -->|No| C[Ask for Photo] --> Z[End]
-    B -->|Yes| D[Get File Info]
-    D --> E[Download Photo Bytes]
-    E --> F[Build Payload]
-    F --> G[Gemini Vision Extract]
-    G --> H[Parse & Normalize]
-    H --> I{Parse OK?}
-    I -->|No| J[Notify Error] --> Z
-    I -->|Yes| K[Sheets: Log Receipt]
-    K --> L[Find Date Folder]
-    L --> M{Exists?}
-    M -->|No| N[Create Date Folder]
-    M -->|Yes| O[Merge Folder ID]
-    N --> O
-    O --> P[Drive: Upload Photo]
-    P --> Q[Confirm to User] --> Z
-```
 
 ## Gemini Prompt Engineering Notes
 

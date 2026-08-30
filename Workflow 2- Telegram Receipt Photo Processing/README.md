@@ -4,7 +4,7 @@
 
 ![n8n](https://img.shields.io/badge/n8n-Workflow-EA4B71?logo=n8n&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram&logoColor=white)
-![Gemini](https://img.shields.io/badge/Google_Gemini-1.5_Flash-8E75B2?logo=google&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google_Gemini-2.5_Flash-8E75B2?logo=google&logoColor=white)
 ![Google Sheets](https://img.shields.io/badge/Google_Sheets-API-34A853?logo=google-sheets&logoColor=white)
 ![Google Drive](https://img.shields.io/badge/Google_Drive-API-4285F4?logo=google-drive&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Production_Ready-success)
@@ -47,7 +47,7 @@ Architecture deep-dive: **[ARCHITECTURE.md](ARCHITECTURE.md)**
 |--------------------|---------------------------------------------------------|
 | Orchestration      | n8n (1.0+)                                              |
 | Input Channel      | Telegram Bot API (webhook)                              |
-| Vision / LLM       | Google Gemini 1.5 Flash                                 |
+| Vision / LLM       | Google Gemini 2.5 Flash (primary) / Tesseract OCR (alternative) |
 | Metadata Store     | Google Sheets API (OAuth 2.0)                           |
 | File Storage       | Google Drive API (OAuth 2.0)                            |
 | Custom Logic       | JavaScript (n8n Code nodes)                              |
@@ -68,28 +68,38 @@ Workflow 2- Telegram Receipt Photo Processing/
 
 ##  Key Design Decisions
 
-### 1. Gemini 1.5 Flash over Pro
-- **Latency:** Flash responds in ~1.5s for a typical receipt — Pro takes 4–6s
-- **Cost:** Free tier covers 1500 receipts/day, paid is $0.075/M input tokens
-- **Accuracy:** For receipts (uniform format, high contrast), Flash ≈ Pro
-- **Quota:** Easier rate limits for personal use
+### 1. Gemini 2.5 Flash as the default
+- **Latency:** ~1.5s for a typical receipt
+- **Cost:** Free tier via Google AI Studio — 10 RPM, 250 RPD, sufficient for most personal/small-business use. Paid tier is $0.30/M input tokens if you need more
+- **Accuracy:** High accuracy on real-world receipts
+- **Structured output:** Excellent JSON compliance with `responseMimeType: application/json`
+- **Quota:** Free tier RPD is the most likely ceiling to hit; rarely RPM unless burst-uploading
 
-### 2. Forced JSON via `responseMimeType`
+### 2. Tesseract OCR as a fallback alternative
+If you can't or don't want to use a cloud API, you can swap Gemini for [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (open-source, runs locally). The tradeoffs:
+- **Pro:** No API key, no cloud cost, fully local/private
+- **Con:** Returns raw text only — you'll need to add a parsing step (regex/heuristics) to extract the same structured fields. Expect more failed parses on messy receipts
+- **Con:** Slower on large images without GPU
+- **Best for:** Privacy-sensitive deployments, offline use, or when Gemini's free tier quota isn't enough
+
+See [SETUP.md](SETUP.md) § 11 for instructions on switching to Tesseract.
+
+### 3. Forced JSON via `responseMimeType`
 Setting `responseMimeType: "application/json"` in the Gemini request tells the model to skip markdown wrapping entirely. The Code node still strips ```json fences defensively, in case the model occasionally ignores the instruction.
 
-### 3. Pick highest-resolution photo from Telegram's array
+### 4. Pick highest-resolution photo from Telegram's array
 Telegram sends each photo as an array of up to 4 sizes (90×90, 320×320, 800×800, 1280×1280). We pick the last one — best quality for OCR.
 
-### 4. Structured prompt with explicit `null` for missing values
+### 5. Structured prompt with explicit `null` for missing values
 The prompt instructs Gemini to return `null` rather than guess. This lets downstream analytics distinguish *"we don't know the tax amount"* from *"the tax was $0"*.
 
-### 5. Find-or-Create pattern for date folders
+### 6. Find-or-Create pattern for date folders
 Same idempotency principle as Workflow 1 — submissions on the same day share a single Drive folder, no matter how many times the workflow runs.
 
-### 6. Telegram reply with parsed data
+### 7. Telegram reply with parsed data
 Closes the UX loop. The user knows in seconds whether their photo was readable. No silent failures.
 
-### 7. Date on **submission**, not receipt date
+### 8. Date on **submission**, not receipt date
 If you upload a photo of a 3-week-old receipt today, it lands in today's Drive folder. Why? Because:
 - Drive folders organized by "when it arrived" → predictable, queryable
 - Receipt date is preserved in the Sheet → still available for accounting
