@@ -1,0 +1,721 @@
+{
+  "name": "Gmail to Sheets & Drive - Multi-Label Attachment Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-id",
+      "name": "Schedule Trigger (Every 15 min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "label_1", "value": "label:label1" },
+            { "name": "label_2", "value": "label:label2" },
+            { "name": "label_3", "value": "label:label3" },
+            { "name": "label_4", "value": "label:label4" },
+            { "name": "label_5", "value": "label:label5" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "label-list-id",
+      "name": "Define Gmail Labels to Monitor",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-labels-id",
+      "name": "Split Labels (Loop)",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the Gmail search query for the current label\nconst label = $input.first().json.label_1\n  || $input.first().json.label_2\n  || $input.first().json.label_3\n  || $input.first().json.label_4\n  || $input.first().json.label_5;\n\nconst cleanLabel = String(label).replace(/^label:/, '').trim();\n\nreturn [\n  {\n    json: {\n      searchQuery: `label:${cleanLabel} is:unread newer_than:1d`,\n      labelName: cleanLabel\n    }\n  }\n];\n"
+      },
+      "id": "build-query-id",
+      "name": "Build Dynamic Gmail Search Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 50,
+        "filters": {
+          "q": "={{ $json.searchQuery }}",
+          "labelIds": []
+        },
+        "options": {}
+      },
+      "id": "gmail-fetch-by-query-id",
+      "name": "Gmail: Fetch Emails by Query",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-credential-id",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-emails-id",
+      "name": "Process Each Email",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract clean data from the Gmail payload and prepare a row for Google Sheets\nconst email = $input.first().json;\n\nconst header = (name) => {\n  const headers = email.headers || [];\n  const found = headers.find(h => h.name && h.name.toLowerCase() === name.toLowerCase());\n  return found ? found.value : '';\n};\n\nconst fromHeader = header('From');\nconst subject = email.subject || '';\nconst dateReceived = email.date || email.internalDate || new Date().toISOString();\nconst snippet = email.snippet || '';\nconst messageId = email.id || '';\nconst threadId = email.threadId || '';\n\nlet senderName = fromHeader;\nlet senderEmail = '';\nconst match = fromHeader.match(/^(.*?)\\s*<([^>]+)>$/);\nif (match) {\n  senderName = match[1].replace(/\"/g, '').trim();\n  senderEmail = match[2].trim();\n} else if (fromHeader.includes('@')) {\n  senderEmail = fromHeader.trim();\n  senderName = fromHeader.trim();\n}\n\nconst labels = (email.labelIds || []).filter(l => !/^(INBOX|CATEGORY_|UNREAD|STARRED|IMPORTANT|SENT|TRASH|DRAFT|SPAM)$/i.test(l));\n\n// Walk the parts tree to find every attachment\nconst collectAttachments = (parts) => {\n  if (!parts) return [];\n  const out = [];\n  for (const p of parts) {\n    if (p.filename && p.body && p.body.attachmentId) {\n      out.push({\n        attachmentId: p.body.attachmentId,\n        filename: p.filename,\n        mimeType: p.mimeType || 'application/octet-stream',\n        size: p.body.size || 0\n      });\n    }\n    if (p.parts) out.push(...collectAttachments(p.parts));\n  }\n  return out;\n};\nconst attachments = collectAttachments(email.payload && email.payload.parts);\n\nreturn [\n  {\n    json: {\n      messageId,\n      threadId,\n      senderName,\n      senderEmail,\n      subject,\n      dateReceived,\n      snippet,\n      labels,\n      attachments,\n      hasAttachments: attachments.length > 0,\n      searchLabel: $('Build Dynamic Gmail Search Query').item.json.labelName\n    }\n  }\n];\n"
+      },
+      "id": "extract-data-id",
+      "name": "Extract Sender & Email Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "list",
+          "cachedResultName": "Email Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Message ID": "={{ $json.messageId }}",
+            "Thread ID": "={{ $json.threadId }}",
+            "Sender Name": "={{ $json.senderName }}",
+            "Sender Email": "={{ $json.senderEmail }}",
+            "Subject": "={{ $json.subject }}",
+            "Date Received": "={{ $json.dateReceived }}",
+            "Snippet": "={{ $json.snippet }}",
+            "Labels": "={{ $json.labels.join(', ') }}",
+            "Has Attachments": "={{ $json.hasAttachments }}",
+            "Source Label": "={{ $json.searchLabel }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Message ID", "displayName": "Message ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Thread ID", "displayName": "Thread ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Sender Name", "displayName": "Sender Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Sender Email", "displayName": "Sender Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Subject", "displayName": "Subject", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Date Received", "displayName": "Date Received", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Snippet", "displayName": "Snippet", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Labels", "displayName": "Labels", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Has Attachments", "displayName": "Has Attachments", "required": false, "defaultMatch": false, "display": true, "type": "boolean", "canBeUsedToMatch": true },
+            { "id": "Source Label", "displayName": "Source Label", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "sheets-append-id",
+      "name": "Google Sheets: Log Email Details",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1320,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credential-id",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// After Sheets logging, mark the email as read so it isn't reprocessed next run\nconst messageId = $('Extract Sender & Email Metadata').item.json.messageId;\nreturn [\n  {\n    json: { messageId }\n  }\n];\n"
+      },
+      "id": "prepare-mark-read-id",
+      "name": "Prepare: Mark Email as Read",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.messageId }}"
+      },
+      "id": "gmail-mark-read-id",
+      "name": "Gmail: Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1760,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-credential-id",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-attachments",
+              "leftValue": "={{ $json.hasAttachments }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-attachments-id",
+      "name": "If: Has Attachments?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build folder names and escape apostrophes for the Drive query\nconst data = $input.first().json;\n\nconst escapeDriveString = (s) => String(s).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, \"\\\\'\");\n\nconst safeFolderName = (data.senderName || 'Unknown Sender')\n  .replace(/[<>:\"/\\\\|?*]/g, '_')\n  .replace(/\\s+/g, ' ')\n  .trim()\n  .substring(0, 100);\n\nconst receivedDate = new Date(data.dateReceived);\nconst formattedDate = isNaN(receivedDate.getTime())\n  ? new Date().toISOString().slice(0, 10)\n  : receivedDate.toISOString().slice(0, 10);\n\nreturn [\n  {\n    json: {\n      ...data,\n      senderFolderName: safeFolderName,\n      dateFolder: formattedDate,\n      rootFolderId: 'YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE',\n      senderFolderNameEscaped: escapeDriveString(safeFolderName),\n      dateFolderEscaped: escapeDriveString(formattedDate)\n    }\n  }\n];\n"
+      },
+      "id": "prepare-folders-id",
+      "name": "Prepare Sender & Date Folder Names",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "=name = '{{ $json.senderFolderNameEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and '{{ $json.rootFolderId }}' in parents and trashed = false"
+            },
+            { "name": "fields", "value": "files(id, name)" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-find-sender-folder-id",
+      "name": "HTTP: Find Existing Sender Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "folder-not-found",
+              "leftValue": "={{ $json.files.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-sender-folder-exists-id",
+      "name": "If: Sender Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.senderFolderName }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"{{ $json.rootFolderId }}\"]\n}",
+        "options": {}
+      },
+      "id": "http-create-sender-folder-id",
+      "name": "HTTP: Create Sender Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the sender folder ID into the workflow data whether it was just created or already existed\nconst incoming = $input.first().json;\nconst newlyCreated = $('HTTP: Create Sender Folder').first()?.json;\nconst existing = $('HTTP: Find Existing Sender Folder').first()?.json?.files?.[0];\nconst senderFolderId = (newlyCreated && newlyCreated.id) || (existing && existing.id) || null;\nif (!senderFolderId) throw new Error('Could not resolve a sender folder ID.');\nreturn [\n  {\n    json: { ...incoming, senderFolderId }\n  }\n];\n"
+      },
+      "id": "merge-sender-folder-id",
+      "name": "Merge: Resolve Sender Folder ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "=name = '{{ $json.dateFolderEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and '{{ $json.senderFolderId }}' in parents and trashed = false"
+            },
+            { "name": "fields", "value": "files(id, name)" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-find-date-folder-id",
+      "name": "HTTP: Find Existing Date Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "date-folder-not-found",
+              "leftValue": "={{ $json.files.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-date-folder-exists-id",
+      "name": "If: Date Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.dateFolder }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"{{ $json.senderFolderId }}\"]\n}",
+        "options": {}
+      },
+      "id": "http-create-date-folder-id",
+      "name": "HTTP: Create Date Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve the date folder ID whether it was just created or already existed\nconst incoming = $input.first().json;\nconst newlyCreated = $('HTTP: Create Date Folder').first()?.json;\nconst existing = $('HTTP: Find Existing Date Folder').first()?.json?.files?.[0];\nconst dateFolderId = (newlyCreated && newlyCreated.id) || (existing && existing.id) || null;\nif (!dateFolderId) throw new Error('Could not resolve a date folder ID.');\nreturn [\n  {\n    json: { ...incoming, dateFolderId }\n  }\n];\n"
+      },
+      "id": "merge-date-folder-id",
+      "name": "Merge: Resolve Date Folder ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {
+          "fieldToSplitOut": "attachments"
+        }
+      },
+      "id": "split-attachments-id",
+      "name": "Process Each Attachment",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.messageId }}/attachments/{{ $json.attachmentId }}?alt=media",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+          ]
+        },
+        "responseFormat": "file",
+        "options": {
+          "fileName": "={{ $json.filename }}"
+        }
+      },
+      "id": "http-download-attachment-id",
+      "name": "HTTP: Download Attachment (Original Filename)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $binary.data.fileName || $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "value": "myDrive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.dateFolderId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "drive-upload-id",
+      "name": "Google Drive: Upload to Date Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4620,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-credential-id",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Every 15 min)": {
+      "main": [
+        [
+          { "node": "Define Gmail Labels to Monitor", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Define Gmail Labels to Monitor": {
+      "main": [
+        [
+          { "node": "Split Labels (Loop)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Split Labels (Loop)": {
+      "main": [
+        [
+          { "node": "Build Dynamic Gmail Search Query", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Dynamic Gmail Search Query": {
+      "main": [
+        [
+          { "node": "Gmail: Fetch Emails by Query", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Gmail: Fetch Emails by Query": {
+      "main": [
+        [
+          { "node": "Process Each Email", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Process Each Email": {
+      "main": [
+        [
+          { "node": "Extract Sender & Email Metadata", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Sender & Email Metadata": {
+      "main": [
+        [
+          { "node": "Google Sheets: Log Email Details", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Google Sheets: Log Email Details": {
+      "main": [
+        [
+          { "node": "Prepare: Mark Email as Read", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "If: Has Attachments?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare: Mark Email as Read": {
+      "main": [
+        [
+          { "node": "Gmail: Mark as Read", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Has Attachments?": {
+      "main": [
+        [
+          { "node": "Prepare Sender & Date Folder Names", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Sender & Date Folder Names": {
+      "main": [
+        [
+          { "node": "HTTP: Find Existing Sender Folder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Find Existing Sender Folder": {
+      "main": [
+        [
+          { "node": "If: Sender Folder Exists?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Sender Folder Exists?": {
+      "main": [
+        [
+          { "node": "HTTP: Create Sender Folder", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Merge: Resolve Sender Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Create Sender Folder": {
+      "main": [
+        [
+          { "node": "Merge: Resolve Sender Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge: Resolve Sender Folder ID": {
+      "main": [
+        [
+          { "node": "HTTP: Find Existing Date Folder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Find Existing Date Folder": {
+      "main": [
+        [
+          { "node": "If: Date Folder Exists?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Date Folder Exists?": {
+      "main": [
+        [
+          { "node": "HTTP: Create Date Folder", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Create Date Folder": {
+      "main": [
+        [
+          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge: Resolve Date Folder ID": {
+      "main": [
+        [
+          { "node": "Process Each Attachment", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Process Each Attachment": {
+      "main": [
+        [
+          { "node": "HTTP: Download Attachment (Original Filename)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Download Attachment (Original Filename)": {
+      "main": [
+        [
+          { "node": "Google Drive: Upload to Date Folder", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1.1.0",
+  "triggerCount": 1,
+  "tags": [
+    { "name": "Gmail" },
+    { "name": "Google Drive" },
+    { "name": "Google Sheets" },
+    { "name": "Automation" }
+  ]
+}

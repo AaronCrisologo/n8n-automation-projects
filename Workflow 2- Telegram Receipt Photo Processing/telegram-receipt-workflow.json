@@ -1,0 +1,590 @@
+{
+  "name": "Telegram Receipt Inbox - Gemini OCR to Sheets & Drive",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger-id",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [-220, 0],
+      "webhookId": "telegram-receipt-bot-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-photo",
+              "leftValue": "={{ $json.message.photo }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": false
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-photo-id",
+      "name": "If: Has Photo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Please send a photo of your receipt. 📸",
+        "additionalFields": {}
+      },
+      "id": "telegram-ask-photo-id",
+      "name": "Telegram: Ask for Photo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [200, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-api-credential-id",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pick the highest-resolution photo (last element of the array)\nconst message = $('If: Has Photo?').item.json.message;\nconst photoArr = Array.isArray(message.photo) ? message.photo : [];\nconst bestPhoto = photoArr.length > 0 ? photoArr[photoArr.length - 1] : null;\n\nif (!bestPhoto) {\n  throw new Error('No photo found in message despite the If check passing.');\n}\n\nreturn [\n  {\n    json: {\n      chatId: message.chat.id,\n      messageId: message.message_id,\n      bestFileId: bestPhoto.file_id,\n      caption: message.caption || '',\n      fromUser: message.from || {},\n      messageTimestamp: message.date\n    }\n  }\n];\n"
+      },
+      "id": "pick-best-photo-id",
+      "name": "Pick Best Photo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.bestFileId }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-get-file-id",
+      "name": "Telegram: Get File Info",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [440, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-api-credential-id",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.telegram.org/file/bot{{ $credentials.telegramApi.accessToken }}/{{ $json.result.file_path }}",
+        "responseFormat": "file",
+        "options": {}
+      },
+      "id": "http-download-file-id",
+      "name": "HTTP: Download Photo Bytes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a clean filename and assemble the receipt payload, preserving the photo binary\nconst meta = $('Pick Best Photo').item.json;\nconst fileInfo = $('Telegram: Get File Info').first().json.result || {};\nconst filePath = fileInfo.file_path || '';\nconst fileExt = (filePath.split('.').pop() || 'jpg').toLowerCase();\n\nconst now = new Date();\nconst pad = (n) => String(n).padStart(2, '0');\nconst stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;\nconst cleanFileName = `receipt_${meta.fromUser.id || 'anon'}_${stamp}.${fileExt}`;\n\nconst submissionDate = new Date(meta.messageTimestamp * 1000).toISOString();\n\nreturn [\n  {\n    json: {\n      chatId: meta.chatId,\n      messageId: meta.messageId,\n      telegramUserId: meta.fromUser.id || null,\n      telegramUsername: meta.fromUser.username || '',\n      telegramFirstName: meta.fromUser.first_name || '',\n      caption: meta.caption || '',\n      originalFileName: cleanFileName,\n      photoFileId: meta.bestFileId,\n      photoFileSize: fileInfo.file_size || 0,\n      submissionDate,\n      submissionDateFolder: submissionDate.slice(0, 10)\n    },\n    binary: $('HTTP: Download Photo Bytes').item.binary\n  }\n];\n"
+      },
+      "id": "build-payload-id",
+      "name": "Build Receipt Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-goog-api-key", "value": "YOUR_GEMINI_API_KEY_HERE" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a precise receipt OCR assistant. Extract structured data from this receipt image and return ONLY a valid JSON object with these exact fields (use null for missing values, never guess):\\n\\n{\\n  \\\"merchant_name\\\": string,\\n  \\\"merchant_address\\\": string | null,\\n  \\\"receipt_date\\\": string (ISO 8601 YYYY-MM-DD or null),\\n  \\\"receipt_time\\\": string (HH:MM 24h or null),\\n  \\\"currency\\\": string (ISO 4217 like USD, EUR, GBP, PHP or null),\\n  \\\"subtotal\\\": number | null,\\n  \\\"tax\\\": number | null,\\n  \\\"tip\\\": number | null,\\n  \\\"total_amount\\\": number,\\n  \\\"payment_method\\\": string (cash, card, mobile, etc. or null),\\n  \\\"card_last4\\\": string | null,\\n  \\\"category\\\": string (one of: meals, travel, office, software, hardware, entertainment, utilities, other or null),\\n  \\\"line_items\\\": [{ \\\"description\\\": string, \\\"quantity\\\": number, \\\"unit_price\\\": number, \\\"total\\\": number }],\\n  \\\"notes\\\": string | null\\n}\\n\\nRules:\\n- If you cannot read a value clearly, set it to null.\\n- total_amount is the GRAND TOTAL including tax and tip.\\n- Return ONLY the JSON object. No markdown fences, no commentary, no prose.\"\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $binary.data.mimeType }}\",\n            \"data\": \"{{ $binary.data.data }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.1,\n    \"topP\": 0.8,\n    \"maxOutputTokens\": 2048,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "id": "http-gemini-extract-id",
+      "name": "HTTP: Gemini Vision Extract",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini's JSON response and normalize it for the spreadsheet\nconst geminiResponse = $input.first().json;\nconst text = geminiResponse?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n\nlet parsed = {};\nlet parseError = false;\nlet parseErrorMessage = '';\ntry {\n  const cleaned = text\n    .trim()\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/```\\s*$/i, '')\n    .trim();\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  parseError = true;\n  parseErrorMessage = err.message;\n}\n\nconst toNumber = (v) => {\n  if (v === null || v === undefined || v === '') return null;\n  if (typeof v === 'number') return v;\n  const n = parseFloat(String(v).replace(/[^0-9.\\-]/g, ''));\n  return Number.isFinite(n) ? n : null;\n};\n\nconst meta = $('Build Receipt Payload').item.json;\n\nreturn [\n  {\n    json: {\n      ...meta,\n      parseError,\n      parseErrorMessage,\n      merchantName: parsed.merchant_name || null,\n      merchantAddress: parsed.merchant_address || null,\n      receiptDate: parsed.receipt_date || null,\n      receiptTime: parsed.receipt_time || null,\n      currency: parsed.currency || null,\n      subtotal: toNumber(parsed.subtotal),\n      tax: toNumber(parsed.tax),\n      tip: toNumber(parsed.tip),\n      totalAmount: toNumber(parsed.total_amount),\n      paymentMethod: parsed.payment_method || null,\n      cardLast4: parsed.card_last4 || null,\n      category: parsed.category || null,\n      lineItemCount: Array.isArray(parsed.line_items) ? parsed.line_items.length : 0,\n      lineItemsJson: JSON.stringify(parsed.line_items || []),\n      notes: parsed.notes || null,\n      ocrModel: 'gemini-1.5-flash',\n      ocrTimestamp: new Date().toISOString()\n    },\n    binary: $('Build Receipt Payload').item.binary\n  }\n];\n"
+      },
+      "id": "parse-gemini-id",
+      "name": "Parse & Normalize Gemini Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "parse-failed",
+              "leftValue": "={{ $json.parseError }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-parse-ok-id",
+      "name": "If: Gemini Parse OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Build Receipt Payload').item.json.chatId }}",
+        "text": "=❌ I couldn't read the receipt clearly. Please try again with a sharper, well-lit photo. Error: {{ $json.parseErrorMessage }}",
+        "additionalFields": {}
+      },
+      "id": "telegram-parse-error-id",
+      "name": "Telegram: Notify Parse Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [1760, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-api-credential-id",
+          "name": "Telegram API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "list",
+          "cachedResultName": "Receipt Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $json.ocrTimestamp }}",
+            "Submission Date": "={{ $json.submissionDate }}",
+            "Telegram User": "={{ $json.telegramUsername || $json.telegramFirstName }}",
+            "Telegram User ID": "={{ $json.telegramUserId }}",
+            "Caption": "={{ $json.caption }}",
+            "Merchant": "={{ $json.merchantName }}",
+            "Merchant Address": "={{ $json.merchantAddress }}",
+            "Receipt Date": "={{ $json.receiptDate }}",
+            "Receipt Time": "={{ $json.receiptTime }}",
+            "Currency": "={{ $json.currency }}",
+            "Subtotal": "={{ $json.subtotal }}",
+            "Tax": "={{ $json.tax }}",
+            "Tip": "={{ $json.tip }}",
+            "Total": "={{ $json.totalAmount }}",
+            "Payment Method": "={{ $json.paymentMethod }}",
+            "Card Last 4": "={{ $json.cardLast4 }}",
+            "Category": "={{ $json.category }}",
+            "Line Items": "={{ $json.lineItemCount }}",
+            "Line Items (JSON)": "={{ $json.lineItemsJson }}",
+            "Notes": "={{ $json.notes }}",
+            "Photo File ID": "={{ $json.photoFileId }}",
+            "Drive File Name": "={{ $json.originalFileName }}",
+            "Submission Date Folder": "={{ $json.submissionDateFolder }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Submission Date", "displayName": "Submission Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Telegram User", "displayName": "Telegram User", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Telegram User ID", "displayName": "Telegram User ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Caption", "displayName": "Caption", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Merchant", "displayName": "Merchant", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Merchant Address", "displayName": "Merchant Address", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Receipt Date", "displayName": "Receipt Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Receipt Time", "displayName": "Receipt Time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Currency", "displayName": "Currency", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Subtotal", "displayName": "Subtotal", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "Tax", "displayName": "Tax", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "Tip", "displayName": "Tip", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "Total", "displayName": "Total", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "Payment Method", "displayName": "Payment Method", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Card Last 4", "displayName": "Card Last 4", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Category", "displayName": "Category", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Line Items", "displayName": "Line Items", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
+            { "id": "Line Items (JSON)", "displayName": "Line Items (JSON)", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Notes", "displayName": "Notes", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Photo File ID", "displayName": "Photo File ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Drive File Name", "displayName": "Drive File Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "Submission Date Folder", "displayName": "Submission Date Folder", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "sheets-append-id",
+      "name": "Google Sheets: Log Receipt",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [1760, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credential-id",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sanitize the date folder name and escape apostrophes for the Drive query\nconst data = $input.first().json;\nconst escapeDriveString = (s) => String(s).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, \"\\\\'\");\nconst safeFolder = (data.submissionDateFolder || new Date().toISOString().slice(0, 10))\n  .replace(/[<>:\"/\\\\|?*]/g, '_')\n  .trim();\nreturn [\n  {\n    json: {\n      ...data,\n      dateFolder: safeFolder,\n      dateFolderEscaped: escapeDriveString(safeFolder)\n    }\n  }\n];\n"
+      },
+      "id": "prepare-folder-id",
+      "name": "Prepare Date Folder Name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "=name = '{{ $json.dateFolderEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and 'YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE' in parents and trashed = false"
+            },
+            { "name": "fields", "value": "files(id, name)" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-find-date-folder-id",
+      "name": "HTTP: Find Date Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "date-folder-missing",
+              "leftValue": "={{ $json.files.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-date-folder-exists-id",
+      "name": "If: Date Folder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2420, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.dateFolder }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE\"]\n}",
+        "options": {}
+      },
+      "id": "http-create-date-folder-id",
+      "name": "HTTP: Create Date Folder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve the date folder ID whether it was just created or already existed, and pass through the photo binary\nconst incoming = $input.first().json;\nconst newlyCreated = $('HTTP: Create Date Folder').first()?.json;\nconst existing = $('HTTP: Find Date Folder').first()?.json?.files?.[0];\nconst dateFolderId = (newlyCreated && newlyCreated.id) || (existing && existing.id) || null;\nif (!dateFolderId) throw new Error('Could not resolve a date folder ID.');\nreturn [\n  {\n    json: { ...incoming, dateFolderId },\n    binary: $('Parse & Normalize Gemini Output').item.binary\n  }\n];\n"
+      },
+      "id": "merge-date-folder-id",
+      "name": "Merge: Resolve Date Folder ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2860, 0]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "name": "={{ $binary.data.fileName || $json.originalFileName }}",
+        "driveId": {
+          "__rl": true,
+          "value": "myDrive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $json.dateFolderId }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "drive-upload-id",
+      "name": "Google Drive: Upload Original Photo",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [3080, 0],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "google-drive-credential-id",
+          "name": "Google Drive OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assemble the Telegram reply text from the parsed Gemini output\nconst parsed = $('Parse & Normalize Gemini Output').item.json;\nconst timeStr = parsed.receiptTime ? ' at ' + parsed.receiptTime : '';\nconst totalStr = parsed.totalAmount !== null && parsed.totalAmount !== undefined\n  ? `${parsed.currency || ''} ${parsed.totalAmount}`\n  : '—';\n\nconst text =\n  '✅ Receipt logged!\\n\\n' +\n  '🏪 *' + (parsed.merchantName || 'Unknown merchant') + '*\\n' +\n  '📅 ' + (parsed.receiptDate || 'date unclear') + timeStr + '\\n' +\n  '💰 ' + totalStr + '\\n' +\n  '🏷️ Category: ' + (parsed.category || 'uncategorized') + '\\n\\n' +\n  '📁 Saved to Drive folder: `' + (parsed.submissionDateFolder || '') + '`';\n\nreturn [\n  {\n    json: { chatId: parsed.chatId, text }\n  }\n];\n"
+      },
+      "id": "build-reply-id",
+      "name": "Build Confirmation Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-confirm-id",
+      "name": "Telegram: Confirm to User",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [3520, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-api-credential-id",
+          "name": "Telegram API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          { "node": "If: Has Photo?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Has Photo?": {
+      "main": [
+        [
+          { "node": "Pick Best Photo", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Telegram: Ask for Photo", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Pick Best Photo": {
+      "main": [
+        [
+          { "node": "Telegram: Get File Info", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Telegram: Get File Info": {
+      "main": [
+        [
+          { "node": "HTTP: Download Photo Bytes", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Download Photo Bytes": {
+      "main": [
+        [
+          { "node": "Build Receipt Payload", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Receipt Payload": {
+      "main": [
+        [
+          { "node": "HTTP: Gemini Vision Extract", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Gemini Vision Extract": {
+      "main": [
+        [
+          { "node": "Parse & Normalize Gemini Output", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Parse & Normalize Gemini Output": {
+      "main": [
+        [
+          { "node": "If: Gemini Parse OK?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Gemini Parse OK?": {
+      "main": [
+        [
+          { "node": "Google Sheets: Log Receipt", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Telegram: Notify Parse Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Google Sheets: Log Receipt": {
+      "main": [
+        [
+          { "node": "Prepare Date Folder Name", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Date Folder Name": {
+      "main": [
+        [
+          { "node": "HTTP: Find Date Folder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Find Date Folder": {
+      "main": [
+        [
+          { "node": "If: Date Folder Exists?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "If: Date Folder Exists?": {
+      "main": [
+        [
+          { "node": "HTTP: Create Date Folder", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "HTTP: Create Date Folder": {
+      "main": [
+        [
+          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Merge: Resolve Date Folder ID": {
+      "main": [
+        [
+          { "node": "Google Drive: Upload Original Photo", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Google Drive: Upload Original Photo": {
+      "main": [
+        [
+          { "node": "Build Confirmation Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Build Confirmation Message": {
+      "main": [
+        [
+          { "node": "Telegram: Confirm to User", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "1.1.0",
+  "triggerCount": 1,
+  "tags": [
+    { "name": "Telegram" },
+    { "name": "Gemini" },
+    { "name": "OCR" },
+    { "name": "Receipts" },
+    { "name": "Google Drive" },
+    { "name": "Google Sheets" }
+  ]
+}
