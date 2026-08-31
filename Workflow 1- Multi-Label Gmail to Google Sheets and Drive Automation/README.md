@@ -1,6 +1,6 @@
 #  Gmail → Google Sheets + Drive Attachment Pipeline
 
-> An automated, production-ready **n8n workflow** that ingests labeled Gmail messages, logs sender metadata to a Google Sheet, and archives attachments in Google Drive — neatly organized by sender and date.
+> An automated, production-ready **n8n workflow** that ingests labeled Gmail messages, logs sender metadata to a Google Sheet, and archives attachments in Google Drive — neatly organized by **label, sender, and date**.
 
 ![n8n](https://img.shields.io/badge/n8n-Workflow-EA4B71?logo=n8n&logoColor=white)
 ![Gmail](https://img.shields.io/badge/Gmail-API-EA4335?logo=gmail&logoColor=white)
@@ -19,7 +19,7 @@
 | ️ **Multi-Label Support** | Monitors up to N Gmail labels in one execution path |
 |  **Metadata Logging** | Writes a clean row per email to Google Sheets (sender, subject, date, etc.) |
 |  **Attachment Capture** | Downloads every attachment, preserving the **original filename** |
-|  **Smart Foldering** | Drive hierarchy: `Root / <Sender Name> / <YYYY-MM-DD> / file.ext` |
+|  **Smart Foldering** | Drive hierarchy: `Root / <Label> / <Sender Name> / <YYYY-MM-DD> / file.ext` |
 | ️ **Idempotent** | Re-running never duplicates folders or rows |
 |  **Read-on-Process** | Marks email as read so it isn't reprocessed |
 | ️ **Defensive** | Edge cases handled — sanitized folder names, `newer_than:1d` window, graceful empty-state |
@@ -90,6 +90,9 @@ Three `Split Out` nodes (one per label, per email, per attachment) make every no
 ### 5. Code nodes for parsing
 Email headers (`From`, `Date`, etc.) have messy edge cases — encoded names, missing fields, malformed addresses. Pure expressions get ugly fast; small JS functions are clearer and easier to test.
 
+### 6. Label as the outermost folder
+The same email can carry multiple Gmail labels. Without a label-level folder, the same file would land in `/Acme/2026-08-29/` regardless of which label triggered processing — and a multi-labeled email would get re-processed and re-uploaded once per label, creating duplicates. The 4-level hierarchy (`Root / <Label> / <Sender> / <Date>`) keeps each label's storage isolated and idempotent.
+
 ---
 
 ##  Sample Output
@@ -106,16 +109,18 @@ Email headers (`From`, `Date`, etc.) have messy edge cases — encoded names, mi
 
 ```
  Gmail Attachments Archive/
-├──  John Doe/
-│   ├──  2026-08-29/
-│   │   ├──  Q3_Invoice.pdf
-│   │   └──  Contract_v2.docx
-│   └──  2026-08-25/
-│       └──  Proposal.pdf
-├──  Jane Smith/
-│   └──  2026-08-29/
-│       └──  meeting_notes.pdf
-└──  Acme Corp/
-    └──  2026-08-28/
-        └── (no attachments)
+├──  label1/                          ← e.g. "Clients"
+│   ├──  John Doe/
+│   │   ├──  2026-08-29/
+│   │   │   ├──  Q3_Invoice.pdf
+│   │   │   └──  Contract_v2.docx
+│   │   └──  2026-08-25/
+│   │       └──  Proposal.pdf
+│   └──  Acme Corp/
+│       └──  2026-08-28/
+│           └──  Order_Confirmation.pdf
+└──  label2/                          ← e.g. "Invoices"
+    └──  Jane Smith/
+        └──  2026-08-29/
+            └──  meeting_notes.pdf
 ```

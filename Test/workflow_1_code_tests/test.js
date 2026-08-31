@@ -486,17 +486,57 @@ test('escapes single quotes in sender name for Drive query', () => {
         `expected escaped apostrophe, got ${out[0].json.senderFolderNameEscaped}`);
 });
 
-console.log('\nMerge: Resolve Sender/Date Folder ID');
+test('produces labelFolderName from searchLabel', () => {
+    const code = codeByName('Prepare Sender & Date Folder Names');
+    const out = runCodeNode(code, {
+        input: { senderName: 'Acme', searchLabel: 'Clients', dateReceived: '2026-08-29T14:23:00Z' },
+    });
+    assertEqual(out[0].json.labelFolderName, 'Clients');
+    assertEqual(out[0].json.labelFolderNameEscaped, 'Clients');
+});
 
-// -- Merge nodes (both share the same pattern) ----------------------------
+test('sanitizes illegal characters in label name', () => {
+    const code = codeByName('Prepare Sender & Date Folder Names');
+    const out = runCodeNode(code, {
+        input: { senderName: 'X', searchLabel: 'Q4/Invoices:2026', dateReceived: '2026-08-29T14:23:00Z' },
+    });
+    // / and : are illegal Drive chars, replaced with _
+    assertEqual(out[0].json.labelFolderName, 'Q4_Invoices_2026');
+});
+
+test('truncates label name at 100 characters', () => {
+    const code = codeByName('Prepare Sender & Date Folder Names');
+    const longLabel = 'L'.repeat(150);
+    const out = runCodeNode(code, {
+        input: { senderName: 'X', searchLabel: longLabel, dateReceived: '2026-08-29T14:23:00Z' },
+    });
+    assertEqual(out[0].json.labelFolderName.length, 100);
+});
+
+test('falls back to "Unlabeled" when searchLabel is missing', () => {
+    const code = codeByName('Prepare Sender & Date Folder Names');
+    const out = runCodeNode(code, {
+        input: { senderName: 'X', dateReceived: '2026-08-29T14:23:00Z' },
+    });
+    assertEqual(out[0].json.labelFolderName, 'Unlabeled');
+});
+
+test('escapes single quotes in label name for Drive query', () => {
+    const code = codeByName('Prepare Sender & Date Folder Names');
+    const out = runCodeNode(code, {
+        input: { senderName: 'X', searchLabel: "Client's Folder", dateReceived: '2026-08-29T14:23:00Z' },
+    });
+    assert(out[0].json.labelFolderNameEscaped.includes("Client\\'s Folder"),
+        `expected escaped apostrophe, got ${out[0].json.labelFolderNameEscaped}`);
+});
+
+console.log('\nMerge: Resolve Sender/Date/Label Folder ID');
+
+// -- Merge nodes (share the same pattern) -------------------------------
 
 function makeMergeTests(nodeName, idField) {
-    const createNodeName = idField === 'senderFolderId'
-        ? 'HTTP: Create Sender Folder'
-        : 'HTTP: Create Date Folder';
-    const findNodeName = idField === 'senderFolderId'
-        ? 'HTTP: Find Existing Sender Folder'
-        : 'HTTP: Find Existing Date Folder';
+    const createNodeName = `HTTP: Create ${idField === 'senderFolderId' ? 'Sender' : idField === 'dateFolderId' ? 'Date' : 'Label'} Folder`;
+    const findNodeName = `HTTP: Find Existing ${idField === 'senderFolderId' ? 'Sender' : idField === 'dateFolderId' ? 'Date' : 'Label'} Folder`;
 
     test(`[${nodeName}] uses newly created folder id when create branch fires`, () => {
         const code = codeByName(nodeName);
@@ -532,6 +572,7 @@ function makeMergeTests(nodeName, idField) {
 
 makeMergeTests('Merge: Resolve Sender Folder ID', 'senderFolderId');
 makeMergeTests('Merge: Resolve Date Folder ID', 'dateFolderId');
+makeMergeTests('Merge: Resolve Label Folder ID', 'labelFolderId');
 
 // --- Result ----------------------------------------------------------------
 

@@ -2,35 +2,43 @@
 
 ## Final Drive Folder Hierarchy
 
+Folder structure is **4 levels deep**: `Root / <Label> / <Sender> / <Date Received> / <attachments>`.
+
+The label level prevents collisions when the same sender emails multiple labels (e.g. "Clients" + "Invoices" — without label folders, both would dump into `/Acme/2026-08-29/` and duplicate attachments).
+
 ```
  Google Drive
    └──  Root (configurable)
        │
-       ├──  John Doe
-       │   ├──  2026-08-29
-       │   │   ├──  invoice_aug.pdf
-       │   │   ├──  contract_v2.docx
-       │   │   └── ️  signature.png
-       │   ├──  2026-08-28
-       │   │   └──  report.xlsx
-       │   └──  2026-08-25
-       │       └──  proposal.pdf
+       ├──  Clients
+       │   │
+       │   ├──  John Doe
+       │   │   ├──  2026-08-29
+       │   │   │   ├──  invoice_aug.pdf
+       │   │   │   ├──  contract_v2.docx
+       │   │   │   └──  signature.png
+       │   │   ├──  2026-08-28
+       │   │   │   └──  report.xlsx
+       │   │   └──  2026-08-25
+       │   │       └──  proposal.pdf
+       │   │
+       │   └──  Jane Smith
+       │       ├──  2026-08-29
+       │       │   └──  meeting_notes.pdf
+       │       └──  2026-08-27
+       │           └──  budget.xlsx
        │
-       ├──  Jane Smith
-       │   ├──  2026-08-29
-       │   │   └──  meeting_notes.pdf
-       │   └──  2026-08-27
-       │       └──  budget.xlsx
-       │
-       └──  Acme Corporation
-           ├──  2026-08-29
-           │   ├──  order_001.pdf
-           │   └──  shipping_label.png
-           └──  2026-08-26
-               └──  terms.pdf
+       └──  Invoices
+           │
+           └──  Acme Corporation
+               ├──  2026-08-29
+               │   ├──  order_001.pdf
+               │   └──  shipping_label.png
+               └──  2026-08-26
+                   └──  terms.pdf
 ```
 
-## Google Sheets Row Schema
+## GoogleSheets Row Schema
 
 | Column         | Type    | Example                              |
 |----------------|---------|--------------------------------------|
@@ -56,3 +64,7 @@
 | Find-or-create pattern            | Idempotent — re-running never duplicates folders                     |
 | Mark as read at the end           | Same email never processed twice on the next run                     |
 | `newer_than:1d` Gmail filter      | Bounded window — even if Mark-as-Read fails, no infinite loop        |
+| **Label as a folder level**       | **The same email can carry multiple labels — without a label folder, attaching the same file under two different labels would collide. The 4-level path (`Root / <Label> / <Sender> / <Date>`) keeps each label's storage isolated.** |
+| HTTP retry on every Google call   | 3 attempts with 2s backoff to ride out transient 429s / 5xxs        |
+| Auto-refreshing OAuth tokens      | HTTP nodes use `{{ $credentials.X.accessToken }}` expressions so tokens never expire mid-run |
+| `saveDataSuccessExecution: "500"` | Bounds execution-history retention to 500 runs (was `"all"`, which would fill the database) |

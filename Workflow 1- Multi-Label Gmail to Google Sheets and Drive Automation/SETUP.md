@@ -110,7 +110,15 @@ Date Received  |  Snippet  |  Labels  |  Has Attachments  |  Source Label
 
 1. Create a parent folder: `Gmail Attachments Archive`
 2. Copy its folder ID from the URL (the part after `folders/`)
-3. This is your **root folder** — all sender subfolders live inside
+3. This is your **root folder**. Inside it, the workflow creates:
+   ```
+   Root/
+     <label-name>/          e.g. "Clients", "Invoices"
+       <sender-name>/       e.g. "John Doe", "Acme Corp"
+         <YYYY-MM-DD>/       date the email was received
+           <attachments>     original filenames
+   ```
+   The label-name folder prevents collisions when the same email carries multiple labels.
 
 ---
 

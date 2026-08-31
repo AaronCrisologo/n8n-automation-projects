@@ -52,10 +52,10 @@ Tests cover:
 - **Build Dynamic Gmail Search Query** — picks first non-empty label, strips `label:` prefix
 - **Extract Sender & Email Metadata** (most complex, 65 lines) — parses `From` header, recursively walks `payload.parts` to collect attachments, filters out Gmail system labels
 - **Prepare: Mark Email as Read** — pass-through
-- **Prepare Sender & Date Folder Names** — sanitizes illegal Drive chars, RFC 2822 + ISO date parsing, single-quote escaping
-- **Merge: Resolve Sender Folder ID** / **Merge: Resolve Date Folder ID** — newly created vs existing branch, throws on failure
+- **Prepare Sender & Date Folder Names** — sanitizes illegal Drive chars (incl. label name), RFC 2822 + ISO date parsing, single-quote escaping, label fallback to "Unlabeled"
+- **Merge: Resolve Sender Folder ID** / **Merge: Resolve Date Folder ID** / **Merge: Resolve Label Folder ID** — newly created vs existing branch, throws on failure
 
-Currently **31 test cases**, all passing. Includes a few "documented limitation" tests that pin down known edge cases in the code (e.g. `CATEGORY_Promotions` is not filtered by the label regex because the pattern is anchored).
+Currently **38 test cases**, all passing. Includes a few "documented limitation" tests that pin down known edge cases in the code (e.g. `CATEGORY_Promotions` is not filtered by the label regex because the pattern is anchored).
 
 ### `workflow_2_code_tests/test.js` — Telegram Code-node unit tests
 
