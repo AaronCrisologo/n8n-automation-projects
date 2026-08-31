@@ -3,14 +3,19 @@
   "nodes": [
     {
       "parameters": {
-        "updates": ["message"],
+        "updates": [
+          "message"
+        ],
         "additionalFields": {}
       },
       "id": "telegram-trigger-id",
       "name": "Telegram Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.1,
-      "position": [-220, 0],
+      "position": [
+        -220,
+        0
+      ],
       "webhookId": "telegram-receipt-bot-webhook"
     },
     {
@@ -41,7 +46,10 @@
       "name": "If: Has Photo?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [0, 0]
+      "position": [
+        0,
+        0
+      ]
     },
     {
       "parameters": {
@@ -53,7 +61,10 @@
       "name": "Telegram: Ask for Photo",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [200, 200],
+      "position": [
+        200,
+        200
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-api-credential-id",
@@ -69,7 +80,10 @@
       "name": "Pick Best Photo",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -82,7 +96,10 @@
       "name": "Telegram: Get File Info",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [440, 0],
+      "position": [
+        440,
+        0
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-api-credential-id",
@@ -101,7 +118,10 @@
       "name": "HTTP: Download Photo Bytes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [660, 0]
+      "position": [
+        660,
+        0
+      ]
     },
     {
       "parameters": {
@@ -111,7 +131,10 @@
       "name": "Build Receipt Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, 0]
+      "position": [
+        880,
+        0
+      ]
     },
     {
       "parameters": {
@@ -120,20 +143,34 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-goog-api-key", "value": "YOUR_GEMINI_API_KEY_HERE" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "x-goog-api-key",
+              "value": "YOUR_GEMINI_API_KEY_HERE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a precise receipt OCR assistant. Extract structured data from this receipt image and return ONLY a valid JSON object with these exact fields (use null for missing values, never guess):\\n\\n{\\n  \\\"merchant_name\\\": string,\\n  \\\"merchant_address\\\": string | null,\\n  \\\"receipt_date\\\": string (ISO 8601 YYYY-MM-DD or null),\\n  \\\"receipt_time\\\": string (HH:MM 24h or null),\\n  \\\"currency\\\": string (ISO 4217 like USD, EUR, GBP, PHP or null),\\n  \\\"subtotal\\\": number | null,\\n  \\\"tax\\\": number | null,\\n  \\\"tip\\\": number | null,\\n  \\\"total_amount\\\": number,\\n  \\\"payment_method\\\": string (cash, card, mobile, etc. or null),\\n  \\\"card_last4\\\": string | null,\\n  \\\"category\\\": string (one of: meals, travel, office, software, hardware, entertainment, utilities, other or null),\\n  \\\"line_items\\\": [{ \\\"description\\\": string, \\\"quantity\\\": number, \\\"unit_price\\\": number, \\\"total\\\": number }],\\n  \\\"notes\\\": string | null\\n}\\n\\nRules:\\n- If you cannot read a value clearly, set it to null.\\n- total_amount is the GRAND TOTAL including tax and tip.\\n- Return ONLY the JSON object. No markdown fences, no commentary, no prose.\"\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $binary.data.mimeType }}\",\n            \"data\": \"{{ $binary.data.data }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.1,\n    \"topP\": 0.8,\n    \"maxOutputTokens\": 2048,\n    \"responseMimeType\": \"application/json\"\n  }\n}",
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-gemini-extract-id",
       "name": "HTTP: Gemini Vision Extract",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 0]
+      "position": [
+        1100,
+        0
+      ]
     },
     {
       "parameters": {
@@ -143,7 +180,10 @@
       "name": "Parse & Normalize Gemini Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 0]
+      "position": [
+        1320,
+        0
+      ]
     },
     {
       "parameters": {
@@ -173,7 +213,10 @@
       "name": "If: Gemini Parse OK?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [1540, 0]
+      "position": [
+        1540,
+        0
+      ]
     },
     {
       "parameters": {
@@ -185,7 +228,10 @@
       "name": "Telegram: Notify Parse Error",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [1760, 200],
+      "position": [
+        1760,
+        200
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-api-credential-id",
@@ -237,29 +283,213 @@
           },
           "matchingColumns": [],
           "schema": [
-            { "id": "Timestamp", "displayName": "Timestamp", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Submission Date", "displayName": "Submission Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Telegram User", "displayName": "Telegram User", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Telegram User ID", "displayName": "Telegram User ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Caption", "displayName": "Caption", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Merchant", "displayName": "Merchant", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Merchant Address", "displayName": "Merchant Address", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Receipt Date", "displayName": "Receipt Date", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Receipt Time", "displayName": "Receipt Time", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Currency", "displayName": "Currency", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Subtotal", "displayName": "Subtotal", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "Tax", "displayName": "Tax", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "Tip", "displayName": "Tip", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "Total", "displayName": "Total", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "Payment Method", "displayName": "Payment Method", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Card Last 4", "displayName": "Card Last 4", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Category", "displayName": "Category", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Line Items", "displayName": "Line Items", "required": false, "defaultMatch": false, "display": true, "type": "number", "canBeUsedToMatch": true },
-            { "id": "Line Items (JSON)", "displayName": "Line Items (JSON)", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Notes", "displayName": "Notes", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Photo File ID", "displayName": "Photo File ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Drive File Name", "displayName": "Drive File Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Submission Date Folder", "displayName": "Submission Date Folder", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Submission Date",
+              "displayName": "Submission Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram User",
+              "displayName": "Telegram User",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Telegram User ID",
+              "displayName": "Telegram User ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Caption",
+              "displayName": "Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Merchant",
+              "displayName": "Merchant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Merchant Address",
+              "displayName": "Merchant Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt Date",
+              "displayName": "Receipt Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt Time",
+              "displayName": "Receipt Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tip",
+              "displayName": "Tip",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Method",
+              "displayName": "Payment Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Card Last 4",
+              "displayName": "Card Last 4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Line Items",
+              "displayName": "Line Items",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Line Items (JSON)",
+              "displayName": "Line Items (JSON)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Photo File ID",
+              "displayName": "Photo File ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Drive File Name",
+              "displayName": "Drive File Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Submission Date Folder",
+              "displayName": "Submission Date Folder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
@@ -270,7 +500,10 @@
       "name": "Google Sheets: Log Receipt",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.6,
-      "position": [1760, 0],
+      "position": [
+        1760,
+        0
+      ],
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "google-sheets-credential-id",
@@ -286,7 +519,10 @@
       "name": "Prepare Date Folder Name",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1980, 0]
+      "position": [
+        1980,
+        0
+      ]
     },
     {
       "parameters": {
@@ -299,22 +535,36 @@
               "name": "q",
               "value": "=name = '{{ $json.dateFolderEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and 'YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE' in parents and trashed = false"
             },
-            { "name": "fields", "value": "files(id, name)" }
+            {
+              "name": "fields",
+              "value": "files(id, name)"
+            }
           ]
         },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
+            }
           ]
         },
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-find-date-folder-id",
       "name": "HTTP: Find Date Folder",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, 0]
+      "position": [
+        2200,
+        0
+      ]
     },
     {
       "parameters": {
@@ -343,7 +593,10 @@
       "name": "If: Date Folder Exists?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [2420, 0]
+      "position": [
+        2420,
+        0
+      ]
     },
     {
       "parameters": {
@@ -352,20 +605,34 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"name\": \"{{ $json.dateFolder }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE\"]\n}",
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-create-date-folder-id",
       "name": "HTTP: Create Date Folder",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2640, 150]
+      "position": [
+        2640,
+        150
+      ]
     },
     {
       "parameters": {
@@ -375,7 +642,10 @@
       "name": "Merge: Resolve Date Folder ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2860, 0]
+      "position": [
+        2860,
+        0
+      ]
     },
     {
       "parameters": {
@@ -398,7 +668,10 @@
       "name": "Google Drive: Upload Original Photo",
       "type": "n8n-nodes-base.googleDrive",
       "typeVersion": 3,
-      "position": [3080, 0],
+      "position": [
+        3080,
+        0
+      ],
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "google-drive-credential-id",
@@ -414,7 +687,10 @@
       "name": "Build Confirmation Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3300, 0]
+      "position": [
+        3300,
+        0
+      ]
     },
     {
       "parameters": {
@@ -428,7 +704,10 @@
       "name": "Telegram: Confirm to User",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.1,
-      "position": [3520, 0],
+      "position": [
+        3520,
+        0
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-api-credential-id",
@@ -441,128 +720,208 @@
     "Telegram Trigger": {
       "main": [
         [
-          { "node": "If: Has Photo?", "type": "main", "index": 0 }
+          {
+            "node": "If: Has Photo?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Has Photo?": {
       "main": [
         [
-          { "node": "Pick Best Photo", "type": "main", "index": 0 }
+          {
+            "node": "Pick Best Photo",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Telegram: Ask for Photo", "type": "main", "index": 0 }
+          {
+            "node": "Telegram: Ask for Photo",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Pick Best Photo": {
       "main": [
         [
-          { "node": "Telegram: Get File Info", "type": "main", "index": 0 }
+          {
+            "node": "Telegram: Get File Info",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Telegram: Get File Info": {
       "main": [
         [
-          { "node": "HTTP: Download Photo Bytes", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Download Photo Bytes",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Download Photo Bytes": {
       "main": [
         [
-          { "node": "Build Receipt Payload", "type": "main", "index": 0 }
+          {
+            "node": "Build Receipt Payload",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Receipt Payload": {
       "main": [
         [
-          { "node": "HTTP: Gemini Vision Extract", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Gemini Vision Extract",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Gemini Vision Extract": {
       "main": [
         [
-          { "node": "Parse & Normalize Gemini Output", "type": "main", "index": 0 }
+          {
+            "node": "Parse & Normalize Gemini Output",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Parse & Normalize Gemini Output": {
       "main": [
         [
-          { "node": "If: Gemini Parse OK?", "type": "main", "index": 0 }
+          {
+            "node": "If: Gemini Parse OK?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Gemini Parse OK?": {
       "main": [
         [
-          { "node": "Google Sheets: Log Receipt", "type": "main", "index": 0 }
+          {
+            "node": "Google Sheets: Log Receipt",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Telegram: Notify Parse Error", "type": "main", "index": 0 }
+          {
+            "node": "Telegram: Notify Parse Error",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Google Sheets: Log Receipt": {
       "main": [
         [
-          { "node": "Prepare Date Folder Name", "type": "main", "index": 0 }
+          {
+            "node": "Prepare Date Folder Name",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Date Folder Name": {
       "main": [
         [
-          { "node": "HTTP: Find Date Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Find Date Folder",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Find Date Folder": {
       "main": [
         [
-          { "node": "If: Date Folder Exists?", "type": "main", "index": 0 }
+          {
+            "node": "If: Date Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Date Folder Exists?": {
       "main": [
         [
-          { "node": "HTTP: Create Date Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Create Date Folder",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Date Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Create Date Folder": {
       "main": [
         [
-          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Date Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge: Resolve Date Folder ID": {
       "main": [
         [
-          { "node": "Google Drive: Upload Original Photo", "type": "main", "index": 0 }
+          {
+            "node": "Google Drive: Upload Original Photo",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Google Drive: Upload Original Photo": {
       "main": [
         [
-          { "node": "Build Confirmation Message", "type": "main", "index": 0 }
+          {
+            "node": "Build Confirmation Message",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Confirmation Message": {
       "main": [
         [
-          { "node": "Telegram: Confirm to User", "type": "main", "index": 0 }
+          {
+            "node": "Telegram: Confirm to User",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
@@ -571,7 +930,7 @@
     "executionOrder": "v1",
     "saveExecutionProgress": true,
     "saveManualExecutions": true,
-    "saveDataSuccessExecution": "all",
+    "saveDataSuccessExecution": "500",
     "saveDataErrorExecution": "all",
     "timezone": "America/New_York"
   },
@@ -580,11 +939,23 @@
   "versionId": "1.1.0",
   "triggerCount": 1,
   "tags": [
-    { "name": "Telegram" },
-    { "name": "Gemini" },
-    { "name": "OCR" },
-    { "name": "Receipts" },
-    { "name": "Google Drive" },
-    { "name": "Google Sheets" }
+    {
+      "name": "Telegram"
+    },
+    {
+      "name": "Gemini"
+    },
+    {
+      "name": "OCR"
+    },
+    {
+      "name": "Receipts"
+    },
+    {
+      "name": "Google Drive"
+    },
+    {
+      "name": "Google Sheets"
+    }
   ]
 }

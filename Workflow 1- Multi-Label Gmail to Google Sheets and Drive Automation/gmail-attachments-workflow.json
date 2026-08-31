@@ -25,11 +25,26 @@
       "parameters": {
         "values": {
           "string": [
-            { "name": "label_1", "value": "label:label1" },
-            { "name": "label_2", "value": "label:label2" },
-            { "name": "label_3", "value": "label:label3" },
-            { "name": "label_4", "value": "label:label4" },
-            { "name": "label_5", "value": "label:label5" }
+            {
+              "name": "label_1",
+              "value": "label:label1"
+            },
+            {
+              "name": "label_2",
+              "value": "label:label2"
+            },
+            {
+              "name": "label_3",
+              "value": "label:label3"
+            },
+            {
+              "name": "label_4",
+              "value": "label:label4"
+            },
+            {
+              "name": "label_5",
+              "value": "label:label5"
+            }
           ]
         },
         "options": {}
@@ -154,16 +169,96 @@
           },
           "matchingColumns": [],
           "schema": [
-            { "id": "Message ID", "displayName": "Message ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Thread ID", "displayName": "Thread ID", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Sender Name", "displayName": "Sender Name", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Sender Email", "displayName": "Sender Email", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Subject", "displayName": "Subject", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Date Received", "displayName": "Date Received", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Snippet", "displayName": "Snippet", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Labels", "displayName": "Labels", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
-            { "id": "Has Attachments", "displayName": "Has Attachments", "required": false, "defaultMatch": false, "display": true, "type": "boolean", "canBeUsedToMatch": true },
-            { "id": "Source Label", "displayName": "Source Label", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Thread ID",
+              "displayName": "Thread ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Name",
+              "displayName": "Sender Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sender Email",
+              "displayName": "Sender Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Received",
+              "displayName": "Date Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Snippet",
+              "displayName": "Snippet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Labels",
+              "displayName": "Labels",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Has Attachments",
+              "displayName": "Has Attachments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source Label",
+              "displayName": "Source Label",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
@@ -252,6 +347,17 @@
       ]
     },
     {
+      "parameters": {},
+      "id": "no-op-id",
+      "name": "NoOp (email has no attachments)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1980,
+        150
+      ]
+    },
+    {
       "parameters": {
         "jsCode": "// Build folder names and escape apostrophes for the Drive query\nconst data = $input.first().json;\n\nconst escapeDriveString = (s) => String(s).replace(/\\\\/g, '\\\\\\\\').replace(/'/g, \"\\\\'\");\n\nconst safeFolderName = (data.senderName || 'Unknown Sender')\n  .replace(/[<>:\"/\\\\|?*]/g, '_')\n  .replace(/\\s+/g, ' ')\n  .trim()\n  .substring(0, 100);\n\nconst receivedDate = new Date(data.dateReceived);\nconst formattedDate = isNaN(receivedDate.getTime())\n  ? new Date().toISOString().slice(0, 10)\n  : receivedDate.toISOString().slice(0, 10);\n\nreturn [\n  {\n    json: {\n      ...data,\n      senderFolderName: safeFolderName,\n      dateFolder: formattedDate,\n      rootFolderId: 'YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE',\n      senderFolderNameEscaped: escapeDriveString(safeFolderName),\n      dateFolderEscaped: escapeDriveString(formattedDate)\n    }\n  }\n];\n"
       },
@@ -275,7 +381,10 @@
               "name": "q",
               "value": "=name = '{{ $json.senderFolderNameEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and '{{ $json.rootFolderId }}' in parents and trashed = false"
             },
-            { "name": "fields", "value": "files(id, name)" }
+            {
+              "name": "fields",
+              "value": "files(id, name)"
+            }
           ]
         },
         "sendHeaders": true,
@@ -283,11 +392,16 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN"
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
             }
           ]
         },
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-find-sender-folder-id",
       "name": "HTTP: Find Existing Sender Folder",
@@ -337,14 +451,25 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"name\": \"{{ $json.senderFolderName }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"{{ $json.rootFolderId }}\"]\n}",
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-create-sender-folder-id",
       "name": "HTTP: Create Sender Folder",
@@ -379,16 +504,27 @@
               "name": "q",
               "value": "=name = '{{ $json.dateFolderEscaped }}' and mimeType = 'application/vnd.google-apps.folder' and '{{ $json.senderFolderId }}' in parents and trashed = false"
             },
-            { "name": "fields", "value": "files(id, name)" }
+            {
+              "name": "fields",
+              "value": "files(id, name)"
+            }
           ]
         },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
+            }
           ]
         },
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-find-date-folder-id",
       "name": "HTTP: Find Existing Date Folder",
@@ -438,14 +574,25 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"name\": \"{{ $json.dateFolder }}\",\n  \"mimeType\": \"application/vnd.google-apps.folder\",\n  \"parents\": [\"{{ $json.senderFolderId }}\"]\n}",
-        "options": {}
+        "options": {
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
       },
       "id": "http-create-date-folder-id",
       "name": "HTTP: Create Date Folder",
@@ -492,12 +639,19 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "Bearer YOUR_GOOGLE_OAUTH_TOKEN" }
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.gmailOAuth2.accessToken }}"
+            }
           ]
         },
         "responseFormat": "file",
         "options": {
-          "fileName": "={{ $json.filename }}"
+          "fileName": "={{ $json.filename }}",
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
         }
       },
       "id": "http-download-attachment-id",
@@ -546,156 +700,259 @@
     "Schedule Trigger (Every 15 min)": {
       "main": [
         [
-          { "node": "Define Gmail Labels to Monitor", "type": "main", "index": 0 }
+          {
+            "node": "Define Gmail Labels to Monitor",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Define Gmail Labels to Monitor": {
       "main": [
         [
-          { "node": "Split Labels (Loop)", "type": "main", "index": 0 }
+          {
+            "node": "Split Labels (Loop)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Split Labels (Loop)": {
       "main": [
         [
-          { "node": "Build Dynamic Gmail Search Query", "type": "main", "index": 0 }
+          {
+            "node": "Build Dynamic Gmail Search Query",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Build Dynamic Gmail Search Query": {
       "main": [
         [
-          { "node": "Gmail: Fetch Emails by Query", "type": "main", "index": 0 }
+          {
+            "node": "Gmail: Fetch Emails by Query",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Gmail: Fetch Emails by Query": {
       "main": [
         [
-          { "node": "Process Each Email", "type": "main", "index": 0 }
+          {
+            "node": "Process Each Email",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Process Each Email": {
       "main": [
         [
-          { "node": "Extract Sender & Email Metadata", "type": "main", "index": 0 }
+          {
+            "node": "Extract Sender & Email Metadata",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Extract Sender & Email Metadata": {
       "main": [
         [
-          { "node": "Google Sheets: Log Email Details", "type": "main", "index": 0 }
+          {
+            "node": "Google Sheets: Log Email Details",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Google Sheets: Log Email Details": {
       "main": [
         [
-          { "node": "Prepare: Mark Email as Read", "type": "main", "index": 0 }
+          {
+            "node": "Prepare: Mark Email as Read",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "If: Has Attachments?", "type": "main", "index": 0 }
+          {
+            "node": "If: Has Attachments?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare: Mark Email as Read": {
       "main": [
         [
-          { "node": "Gmail: Mark as Read", "type": "main", "index": 0 }
+          {
+            "node": "Gmail: Mark as Read",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Has Attachments?": {
       "main": [
         [
-          { "node": "Prepare Sender & Date Folder Names", "type": "main", "index": 0 }
+          {
+            "node": "Prepare Sender & Date Folder Names",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NoOp (email has no attachments)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Prepare Sender & Date Folder Names": {
       "main": [
         [
-          { "node": "HTTP: Find Existing Sender Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Find Existing Sender Folder",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Find Existing Sender Folder": {
       "main": [
         [
-          { "node": "If: Sender Folder Exists?", "type": "main", "index": 0 }
+          {
+            "node": "If: Sender Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Sender Folder Exists?": {
       "main": [
         [
-          { "node": "HTTP: Create Sender Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Create Sender Folder",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Merge: Resolve Sender Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Sender Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Create Sender Folder": {
       "main": [
         [
-          { "node": "Merge: Resolve Sender Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Sender Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge: Resolve Sender Folder ID": {
       "main": [
         [
-          { "node": "HTTP: Find Existing Date Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Find Existing Date Folder",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Find Existing Date Folder": {
       "main": [
         [
-          { "node": "If: Date Folder Exists?", "type": "main", "index": 0 }
+          {
+            "node": "If: Date Folder Exists?",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "If: Date Folder Exists?": {
       "main": [
         [
-          { "node": "HTTP: Create Date Folder", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Create Date Folder",
+            "type": "main",
+            "index": 0
+          }
         ],
         [
-          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Date Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Create Date Folder": {
       "main": [
         [
-          { "node": "Merge: Resolve Date Folder ID", "type": "main", "index": 0 }
+          {
+            "node": "Merge: Resolve Date Folder ID",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Merge: Resolve Date Folder ID": {
       "main": [
         [
-          { "node": "Process Each Attachment", "type": "main", "index": 0 }
+          {
+            "node": "Process Each Attachment",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Process Each Attachment": {
       "main": [
         [
-          { "node": "HTTP: Download Attachment (Original Filename)", "type": "main", "index": 0 }
+          {
+            "node": "HTTP: Download Attachment (Original Filename)",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "HTTP: Download Attachment (Original Filename)": {
       "main": [
         [
-          { "node": "Google Drive: Upload to Date Folder", "type": "main", "index": 0 }
+          {
+            "node": "Google Drive: Upload to Date Folder",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     }
@@ -704,7 +961,7 @@
     "executionOrder": "v1",
     "saveExecutionProgress": true,
     "saveManualExecutions": true,
-    "saveDataSuccessExecution": "all",
+    "saveDataSuccessExecution": "500",
     "saveDataErrorExecution": "all",
     "timezone": "America/New_York"
   },
@@ -713,9 +970,17 @@
   "versionId": "1.1.0",
   "triggerCount": 1,
   "tags": [
-    { "name": "Gmail" },
-    { "name": "Google Drive" },
-    { "name": "Google Sheets" },
-    { "name": "Automation" }
+    {
+      "name": "Gmail"
+    },
+    {
+      "name": "Google Drive"
+    },
+    {
+      "name": "Google Sheets"
+    },
+    {
+      "name": "Automation"
+    }
   ]
 }

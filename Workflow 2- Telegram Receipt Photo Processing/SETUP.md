@@ -149,19 +149,21 @@ Photo File ID | Drive File Name | Submission Date Folder
 | `YOUR_GEMINI_API_KEY_HERE`             | Google AI Studio (step 3)                     |
 | `YOUR_GOOGLE_SHEET_ID_HERE`            | Sheet URL (step 6)                            |
 | `YOUR_GOOGLE_DRIVE_ROOT_FOLDER_ID_HERE`| Drive folder URL (step 7)                     |
-| `YOUR_GOOGLE_OAUTH_TOKEN`              | Replace with n8n expression (see below)       |
 | `telegram-api-credential-id`           | Your actual n8n Telegram credential ID        |
 | `google-sheets-credential-id`          | Your actual n8n Sheets credential ID          |
 | `google-drive-credential-id`           | Your actual n8n Drive credential ID           |
 
-### ️ HTTP Node Token Refresh
+### HTTP Node Authentication
 
-The `HTTP: Find/Create Date Folder` nodes use a static bearer token placeholder.
-Replace the `Authorization` header value with this expression for live OAuth refresh:
+The `HTTP: Find/Create Date Folder` nodes use n8n expressions to pull live OAuth tokens at runtime, e.g.:
 
 ```
 Value: =Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}
 ```
+
+The token auto-refreshes on every execution, so the workflow never silently breaks from an expired token. **You don't need to manually replace anything for auth — just create the credentials in step 5.**
+
+All HTTP nodes (including the Gemini call) have automatic retry enabled (3 attempts, 2-second backoff) to ride out transient 429s / 5xxs.
 
 ---
 
@@ -195,18 +197,16 @@ Once tests pass, leave the workflow active. The Telegram webhook persists across
 
 The JSON in this folder is **structurally valid and the graph is correct**, but a few configuration details cannot be expressed in the JSON itself and must be addressed when you first import the workflow into n8n.
 
-### 1. HTTP Node Bearer Tokens — Replace Before First Run
+### 1. HTTP Node Bearer Tokens — Pre-wired
 
-Three HTTP nodes use a placeholder string `Bearer YOUR_GOOGLE_OAUTH_TOKEN` in the `Authorization` header. **The workflow will fail with 401 on the first run if you don't replace them.**
+The `HTTP: Find/Create Date Folder` and `HTTP: Gemini Vision Extract` nodes all use n8n expressions to pull live tokens at runtime:
 
-| Node | What to do |
-|------|------------|
-| `HTTP: Find Date Folder` | Replace the header value with `Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}` |
-| `HTTP: Create Date Folder` | Same |
+- Drive calls: `=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}`
+- Gemini call: uses `x-goog-api-key` header set to the `YOUR_GEMINI_API_KEY_HERE` placeholder — replace this with your actual key from step 3
 
-In the n8n UI: open the node → **Headers** tab → click the Authorization row → switch from "Fixed" to **Expression** → paste the expression.
+You don't need to touch the Drive auth expressions — they auto-refresh. **Just make sure to replace `YOUR_GEMINI_API_KEY_HERE` with your actual key from Google AI Studio.**
 
-> **Why this matters:** A static bearer token expires in ~1 hour. Using `{{ $credentials.X.accessToken }}` makes n8n fetch a fresh token on every execution, so the workflow never silently breaks mid-day.
+All HTTP nodes also have automatic retry enabled (3 attempts, 2-second backoff) to handle transient 429s / 5xxs.
 
 ### 2. Telegram Webhook Registration Requires a Public URL
 

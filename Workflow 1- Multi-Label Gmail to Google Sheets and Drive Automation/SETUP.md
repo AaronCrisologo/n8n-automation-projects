@@ -129,18 +129,18 @@ Date Received  |  Snippet  |  Labels  |  Has Attachments  |  Source Label
 | `gmail-oauth-credential-id`            | Replace with your actual n8n credential ID|
 | `google-sheets-credential-id`          | Replace with your actual n8n credential ID|
 | `google-drive-credential-id`           | Replace with your actual n8n credential ID|
-| `YOUR_GOOGLE_OAUTH_TOKEN`              | Use `{{ $credentials.googleDriveOAuth2Api.accessToken }}` instead (HTTP nodes — see note below) |
 
-### ️ Important: HTTP Node Authentication
+### HTTP Node Authentication
 
-The `HTTP: Find/Create Folder` nodes use a static bearer token placeholder for readability.
-In production, replace the `Authorization` header value in each of those 4 nodes with an n8n expression that pulls a live OAuth token from the Google Drive credential:
+The `HTTP: Find/Create Folder` and `HTTP: Download Attachment` nodes use n8n expressions to pull live OAuth tokens from the credentials at runtime, e.g.:
 
 ```
 Value: =Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}
 ```
 
-This ensures the token auto-refreshes and never expires mid-run.
+The token auto-refreshes on every execution, so the workflow never silently breaks from an expired token. **You don't need to manually replace anything for auth — just create the credentials in step 3.**
+
+All HTTP nodes also have automatic retry enabled (3 attempts, 2-second backoff) to handle transient 5xx / 429 responses from Google APIs.
 
 ---
 
@@ -200,20 +200,16 @@ Open the **Schedule Trigger (Every 15 min)** node.
 
 The JSON in this folder is **structurally valid and the graph is correct**, but a few configuration details cannot be expressed in the JSON itself and must be addressed when you first import the workflow into n8n.
 
-### 1. HTTP Node Bearer Tokens — Replace Before First Run
+### 1. HTTP Node Bearer Tokens — Pre-wired
 
-Four HTTP nodes use a placeholder string `Bearer YOUR_GOOGLE_OAUTH_TOKEN` in the `Authorization` header. **The workflow will fail with 401 on the first run if you don't replace them.**
+The 4 HTTP nodes (`Find Existing Sender Folder`, `Create Sender Folder`, `Find Existing Date Folder`, `Download Attachment`) all use n8n expressions to pull live OAuth tokens at runtime:
 
-| Node | What to do |
-|------|------------|
-| `HTTP: Find Existing Sender Folder` | Replace the header value with `Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}` |
-| `HTTP: Create Sender Folder` | Same |
-| `HTTP: Find Existing Date Folder` | Same |
-| `HTTP: Download Attachment (Original Filename)` | Use `Bearer {{ $credentials.gmailOAuth2.accessToken }}` (this one needs the **Gmail** token, not Drive) |
+- Drive calls (`Find Existing *`, `Create *`): `=Bearer {{ $credentials.googleDriveOAuth2Api.accessToken }}`
+- Gmail attachment download: `=Bearer {{ $credentials.gmailOAuth2.accessToken }}`
 
-In the n8n UI: open the node → **Headers** tab → click the Authorization row → switch from "Fixed" to **Expression** → paste the expression.
+You don't need to touch these — they auto-refresh and the workflow will run as-is once you create the credentials in step 3. If you see a 401 in executions, it's a credential issue, not a JSON issue.
 
-> **Why this matters:** A static bearer token expires in ~1 hour. Using `{{ $credentials.X.accessToken }}` makes n8n fetch a fresh token on every execution, so the workflow never silently breaks mid-day.
+All HTTP nodes also have automatic retry enabled (3 attempts, 2-second backoff) to ride out transient 429s / 5xxs.
 
 ### 2. Gmail `markAsRead` Parameter Name
 
@@ -242,9 +238,9 @@ When you **activate** the workflow, n8n will fire the schedule trigger once imme
 
 If you see a `Google Sheets: Log Email Details` "success" with 0 rows, that's normal.
 
-### 5. The `If: Has Attachments?` Node Has No False Branch
+### 5. The `If: Has Attachments?` False Branch Goes to NoOp
 
-This is intentional. The Sheets logging and Mark-as-Read happen on a **parallel branch** off `Google Sheets: Log Email Details` (output index 0), so the false branch of `If: Has Attachments?` is the "do nothing further" path. If you want to log "no attachments" emails differently, add a downstream node off the false output of this If node.
+Emails without attachments are logged to the Sheet, marked as read, then routed through the If node's false branch to a `NoOp` terminal — this explicitly documents the end of the path. If you want to log "no attachments" emails differently (e.g. a separate Sheet tab), add a downstream node off the false output of this If node (the existing `NoOp` is a safe no-op you can disconnect).
 
 ---
 
