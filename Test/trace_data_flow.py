@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from collections import defaultdict
 
-WORKFLOW_DIR = Path(__file__).parent.parent
+WORKFLOW_DIR = Path(__file__).resolve().parent.parent
 
 def load(p):
     return json.loads(p.read_text(encoding="utf-8"))

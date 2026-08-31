@@ -15,7 +15,7 @@ import re
 import sys
 from pathlib import Path
 
-WORKFLOW_DIR = Path(__file__).parent.parent
+WORKFLOW_DIR = Path(__file__).resolve().parent.parent
 
 def load(path):
     return json.loads(path.read_text(encoding="utf-8"))

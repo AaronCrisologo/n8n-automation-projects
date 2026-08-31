@@ -20,6 +20,7 @@ const vm = require('vm');
 const WORKFLOW_PATH = path.join(
     __dirname,
     '..',
+    '..',
     'Workflow 2- Telegram Receipt Photo Processing',
     'telegram-receipt-workflow.json'
 );
