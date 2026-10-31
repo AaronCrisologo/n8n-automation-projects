@@ -1,4 +1,4 @@
-#  n8n Automation Portfolio
+#  n8n Automation
 
 A collection of production-ready n8n workflows demonstrating API integration, AI-powered automation, and production engineering.
 
